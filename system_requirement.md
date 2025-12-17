@@ -85,7 +85,7 @@ id	UUID	PK, default gen_random_uuid()	レコード固有ID
 user_id	UUID	Not Null, Index	データの所有ユーザーID（RLS用）
 content	Text	Not Null	知識の実体（例: "ユーザーは朝型の執筆を好む"）
 embedding	Vector(768)	Index (HNSW/IVFFlat)	content のベクトル埋め込みデータ
-memory_type	Enum	Not Null	fact, state, episode, policy （更新ロジックの分岐に使用）
+memory_type	Enum	Not Null	fact, state, episode （更新ロジックの分岐に使用）
 tags	Text[]	Index (GIN)	AIが付与した分類タグ（例: ["preference", "research"]）
 scope	Enum	Default 'global'	global: 全エージェント共有, agent: 特定エージェント専用
 agent_id	Text	Nullable	scope=agent の場合の対象クライアントID（例: "finance-agent"）
@@ -202,7 +202,7 @@ Pattern 3: AI-Synthesized Context (RAG)
     • Ranking Policy
         • Recency Decay:
             • STATE / EPISODE は時間経過によりスコアを減衰
-            • FACT / POLICY は原則減衰しない
+            • FACT は原則減衰しない
         • Importance:
             • importance が高い記憶は常に優先
         • Confidence:
@@ -260,7 +260,7 @@ warnings	矛盾・低confidence等
 POST /v1/memories — Force / Manual Ingest
 項目	内容
 概要	AI解析を通さず、指定内容を直接登録
-主用途	FACT / POLICY / 設定系情報の確定登録
+主用途	FACT  設定系情報の確定登録
 Request Body
 フィールド	型	必須	説明
 content	string	✔	記憶内容

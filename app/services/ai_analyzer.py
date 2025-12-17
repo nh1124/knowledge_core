@@ -21,7 +21,6 @@ For each piece of information, determine:
    - "fact": Stable, objective information (name, skills, preferences)
    - "state": Temporary, current conditions (mood, health, workload)
    - "episode": Past events or experiences
-   - "policy": User rules or preferences for behavior
 3. **tags**: Relevant classification tags (e.g., ["health", "work", "preference"])
 4. **importance**: 1-5 scale (5=critical, 1=trivial)
 5. **confidence**: 0.0-1.0 how certain you are about this extraction
@@ -38,7 +37,7 @@ Output as JSON array:
 [
   {
     "content": "...",
-    "memory_type": "fact|state|episode|policy",
+    "memory_type": "fact|state|episode",
     "tags": ["tag1", "tag2"],
     "importance": 3,
     "confidence": 0.8

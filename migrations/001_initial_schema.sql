@@ -2,7 +2,7 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Enum types
-CREATE TYPE memory_type_enum AS ENUM ('fact', 'state', 'episode', 'policy');
+CREATE TYPE memory_type_enum AS ENUM ('fact', 'state', 'episode');
 CREATE TYPE scope_enum AS ENUM ('global', 'agent');
 CREATE TYPE input_channel_enum AS ENUM ('chat', 'manual', 'api', 'import');
 CREATE TYPE audit_action_enum AS ENUM ('create', 'update', 'delete', 'restore', 'confirm', 'reject');

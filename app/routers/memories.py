@@ -26,7 +26,7 @@ async def create_memory(
     """Force/manual ingest - bypass AI analysis and directly create a memory.
     
     Use this for:
-    - FACT/POLICY registration that should not be modified by AI
+    - FACT registration that should not be modified by AI
     - API keys, configuration, or high-risk information
     """
     # Use default user_id if not provided
