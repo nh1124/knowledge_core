@@ -17,7 +17,7 @@ engine = create_async_engine(
 )
 
 # Session factory
-async_session_maker = async_sessionmaker(
+SessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
@@ -29,7 +29,7 @@ Base = declarative_base()
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency to get database session."""
-    async with async_session_maker() as session:
+    async with SessionLocal() as session:
         try:
             yield session
             await session.commit()
@@ -43,7 +43,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 @asynccontextmanager
 async def get_db_context() -> AsyncGenerator[AsyncSession, None]:
     """Context manager for database session."""
-    async with async_session_maker() as session:
+    async with SessionLocal() as session:
         try:
             yield session
             await session.commit()

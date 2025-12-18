@@ -24,8 +24,11 @@ class Settings(BaseSettings):
     embedding_model: str = "models/text-embedding-004"
     embedding_dimension: int = 768
     
+    # API Security
+    api_key: str = "cortex_secret_key_2025"  # Default for dev
+    
     # AI Analysis Settings
-    llm_model: str = "models/gemini-2.0-flash-lite"
+    llm_model: str = "models/gemini-2.5-flash-lite"
     
     # Vector Search Settings
     similarity_threshold: float = 0.95

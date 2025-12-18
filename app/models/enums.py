@@ -7,7 +7,6 @@ class MemoryType(str, Enum):
     FACT = "fact"       # Fixed facts - overwrite on update
     STATE = "state"     # Current state - latest wins
     EPISODE = "episode" # Past events - append only
-    POLICY = "policy"   # User preferences/rules
 
 
 class Scope(str, Enum):

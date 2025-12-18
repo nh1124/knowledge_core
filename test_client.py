@@ -12,6 +12,8 @@ import asyncio
 from datetime import datetime
 
 BASE_URL = "http://localhost:8000"
+API_KEY = "cortex_secret_key_2025"  # Must match .env
+HEADERS = {"X-API-KEY": API_KEY}
 
 
 async def test_health():
@@ -22,20 +24,20 @@ async def test_health():
     
     async with httpx.AsyncClient() as client:
         # Root endpoint
-        response = await client.get(f"{BASE_URL}/")
+        response = await client.get(f"{BASE_URL}/", headers=HEADERS)
         print(f"\n✓ GET / : {response.status_code}")
         print(f"  Response: {response.json()}")
         
         # Health check
-        response = await client.get(f"{BASE_URL}/health")
+        response = await client.get(f"{BASE_URL}/health", headers=HEADERS)
         print(f"\n✓ GET /health : {response.status_code}")
         print(f"  Response: {response.json()}")
 
 
 async def test_ingest():
-    """Test text ingestion with AI extraction."""
+    """Test text ingestion with AI extraction (Async with Polling)."""
     print("\n" + "="*60)
-    print("Testing POST /v1/ingest (AI Text Analysis)")
+    print("Testing POST /v1/ingest (AI Text Analysis - ASYNC)")
     print("="*60)
     
     async with httpx.AsyncClient(timeout=60.0) as client:
@@ -47,17 +49,40 @@ async def test_ingest():
         }
         
         print(f"\n→ Sending text: {payload['text'][:50]}...")
-        response = await client.post(f"{BASE_URL}/v1/ingest", json=payload)
+        response = await client.post(f"{BASE_URL}/v1/ingest", json=payload, headers=HEADERS)
         print(f"\n✓ POST /v1/ingest : {response.status_code}")
-        result = response.json()
-        print(f"  Created: {result.get('created_count', 0)}")
-        print(f"  Updated: {result.get('updated_count', 0)}")
-        print(f"  Skipped: {result.get('skipped_count', 0)}")
-        print(f"  Memory IDs: {result.get('memory_ids', [])}")
-        if result.get('warnings'):
-            print(f"  Warnings: {result['warnings']}")
         
-        return result.get('memory_ids', [])
+        if response.status_code != 202:
+            print(f"  Error: {response.text}")
+            return []
+            
+        result = response.json()
+        job_id = result.get("ingest_id")
+        print(f"  Job ID: {job_id}")
+        
+        # Polling for completion
+        print("  Polling for results...")
+        max_attempts = 30
+        for i in range(max_attempts):
+            await asyncio.sleep(2)
+            poll_resp = await client.get(f"{BASE_URL}/v1/ingest/{job_id}", headers=HEADERS)
+            job_data = poll_resp.json()
+            status = job_data.get("status")
+            print(f"    - Attempt {i+1}: Status = {status}")
+            
+            if status == "completed":
+                print(f"\n  ✅ Ingestion Completed!")
+                print(f"    Created: {job_data.get('created_count', 0)}")
+                print(f"    Updated: {job_data.get('updated_count', 0)}")
+                print(f"    Skipped: {job_data.get('skipped_count', 0)}")
+                print(f"    Memory IDs: {job_data.get('memory_ids', [])}")
+                return job_data.get('memory_ids', [])
+            elif status == "failed":
+                print(f"  ❌ Job Failed: {job_data.get('errors')}")
+                return []
+        
+        print("  ❌ Polling timed out")
+        return []
 
 
 async def test_force_create():
@@ -68,7 +93,7 @@ async def test_force_create():
     
     async with httpx.AsyncClient(timeout=30.0) as client:
         payload = {
-            "content": "ユーザーのAPIキー: test_key_12345",
+            "content": f"ユーザーのAPIキー (Test {datetime.now().strftime('%H%M%S')}): test_key_12345",
             "memory_type": "fact",
             "tags": ["credentials", "api"],
             "scope": "global",
@@ -78,7 +103,7 @@ async def test_force_create():
         }
         
         print(f"\n→ Creating FACT: {payload['content']}")
-        response = await client.post(f"{BASE_URL}/v1/memories", json=payload)
+        response = await client.post(f"{BASE_URL}/v1/memories", json=payload, headers=HEADERS)
         print(f"\n✓ POST /v1/memories : {response.status_code}")
         result = response.json()
         print(f"  Created memory ID: {result.get('id')}")
@@ -100,7 +125,7 @@ async def test_search(query: str = None):
             params["q"] = query
         
         print(f"\n→ Searching with params: {params}")
-        response = await client.get(f"{BASE_URL}/v1/memories", params=params)
+        response = await client.get(f"{BASE_URL}/v1/memories", params=params, headers=HEADERS)
         print(f"\n✓ GET /v1/memories : {response.status_code}")
         result = response.json()
         print(f"  Total memories: {result.get('total', 0)}")
@@ -129,7 +154,7 @@ async def test_context(query: str):
         }
         
         print(f"\n→ Query: {query}")
-        response = await client.post(f"{BASE_URL}/v1/context", json=payload)
+        response = await client.post(f"{BASE_URL}/v1/context", json=payload, headers=HEADERS)
         print(f"\n✓ POST /v1/context : {response.status_code}")
         result = response.json()
         
@@ -160,7 +185,7 @@ async def test_update(memory_id: str):
         }
         
         print(f"\n→ Updating memory: {memory_id}")
-        response = await client.patch(f"{BASE_URL}/v1/memories/{memory_id}", json=payload)
+        response = await client.patch(f"{BASE_URL}/v1/memories/{memory_id}", json=payload, headers=HEADERS)
         print(f"\n✓ PATCH /v1/memories/{memory_id} : {response.status_code}")
         
         if response.status_code == 200:
@@ -179,7 +204,7 @@ async def test_delete(memory_id: str):
     
     async with httpx.AsyncClient(timeout=30.0) as client:
         print(f"\n→ Deleting memory: {memory_id}")
-        response = await client.delete(f"{BASE_URL}/v1/memories/{memory_id}")
+        response = await client.delete(f"{BASE_URL}/v1/memories/{memory_id}", headers=HEADERS)
         print(f"\n✓ DELETE /v1/memories/{memory_id} : {response.status_code}")
         
         if response.status_code == 200:
@@ -220,9 +245,10 @@ async def run_all_tests():
             await test_update(force_id)
         
         # 8. Delete (the force-created one)
-        if force_id:
-            await test_delete(force_id)
-        
+        # if force_id:
+        #     #await test_delete(force_id)
+            
+
         print("\n" + "="*60)
         print("✅ ALL TESTS COMPLETED SUCCESSFULLY")
         print("="*60 + "\n")

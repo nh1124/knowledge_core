@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -57,6 +58,7 @@
             font-weight: 600;
             background: linear-gradient(135deg, var(--accent) 0%, #818cf8 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -84,8 +86,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
         }
 
         /* Main Layout */
@@ -253,10 +262,25 @@
             text-transform: uppercase;
         }
 
-        .memory-type.fact { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
-        .memory-type.state { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-        .memory-type.episode { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-        .memory-type.policy { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
+        .memory-type.fact {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+        }
+
+        .memory-type.state {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+
+        .memory-type.episode {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .memory-type.policy {
+            background: rgba(236, 72, 153, 0.2);
+            color: #f472b6;
+        }
 
         .memory-content {
             font-size: 1rem;
@@ -443,8 +467,13 @@
             opacity: 1;
         }
 
-        .toast.success { border-color: var(--success); }
-        .toast.error { border-color: var(--danger); }
+        .toast.success {
+            border-color: var(--success);
+        }
+
+        .toast.error {
+            border-color: var(--danger);
+        }
 
         /* Loading */
         .loading {
@@ -464,10 +493,13 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
+
 <body>
     <header class="header">
         <div class="logo">
@@ -485,6 +517,14 @@
 
     <div class="container">
         <aside class="sidebar">
+            <nav class="nav-section">
+                <h3>Configuration</h3>
+                <div class="form-group" style="padding: 0 1rem;">
+                    <label style="font-size: 0.7rem;">API Key</label>
+                    <input type="password" id="apiKey" value="cortex_secret_key_2025"
+                        style="padding: 0.4rem; font-size: 0.8rem; background: var(--bg-primary);">
+                </div>
+            </nav>
             <nav class="nav-section">
                 <h3>Navigation</h3>
                 <button class="nav-btn active" data-panel="search">🔍 Search Memories</button>
@@ -530,13 +570,15 @@
                 </div>
 
                 <div class="search-container">
-                    <input type="text" class="search-input" id="searchQuery" 
-                           placeholder="Search memories (semantic or text)...">
+                    <input type="text" class="search-input" id="searchQuery"
+                        placeholder="Search memories (semantic or text)...">
                     <button class="btn" onclick="searchMemories()">Search</button>
                 </div>
 
                 <div class="memory-list" id="memoryList">
-                    <div class="loading"><div class="spinner"></div></div>
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
                 </div>
             </div>
 
@@ -551,7 +593,8 @@
 
                 <div class="form-group">
                     <label>Input Text</label>
-                    <textarea id="ingestText" placeholder="例: 私は東京に住んでいます。最近、光工学の研究に取り組んでいます。昨日、指導教官と打ち合わせをしました。"></textarea>
+                    <textarea id="ingestText"
+                        placeholder="例: 私は東京に住んでいます。最近、光工学の研究に取り組んでいます。昨日、指導教官と打ち合わせをしました。"></textarea>
                 </div>
 
                 <div class="form-row">
@@ -622,8 +665,7 @@
 
                 <div class="form-group">
                     <label>Your Question</label>
-                    <input type="text" id="contextQuery" 
-                           placeholder="例: ユーザーの研究テーマについて教えてください">
+                    <input type="text" id="contextQuery" placeholder="例: ユーザーの研究テーマについて教えてください">
                 </div>
 
                 <button class="btn" onclick="submitContext()">🔮 Synthesize Context</button>
@@ -638,7 +680,7 @@
         <div class="modal">
             <h3>Edit Memory</h3>
             <input type="hidden" id="editId">
-            
+
             <div class="form-group">
                 <label>Content</label>
                 <textarea id="editContent"></textarea>
@@ -681,7 +723,7 @@
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.nav-btn[data-panel]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                
+
                 document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
                 document.getElementById(btn.dataset.panel + '-panel').classList.add('active');
             });
@@ -707,11 +749,19 @@
 
         // API Calls
         async function fetchAPI(endpoint, options = {}) {
+            const apiKey = document.getElementById('apiKey').value;
             try {
                 const response = await fetch(API_BASE + endpoint, {
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-KEY': apiKey
+                    },
                     ...options
                 });
+                if (response.status === 401) {
+                    showToast('Unauthorized: Check API Key', 'error');
+                    throw new Error('Unauthorized');
+                }
                 return await response.json();
             } catch (error) {
                 console.error('API Error:', error);
@@ -751,7 +801,7 @@
         // Render memories
         function renderMemories(memories) {
             const list = document.getElementById('memoryList');
-            
+
             if (memories.length === 0) {
                 list.innerHTML = `
                     <div class="empty-state">
@@ -804,22 +854,63 @@
                 return;
             }
 
-            const result = await fetchAPI('/v1/ingest', {
-                method: 'POST',
-                body: JSON.stringify({ text, source, scope })
-            });
+            const resultDiv = document.getElementById('ingestResult');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><span style="margin-left: 1rem;">Starting ingestion...</span></div>';
 
-            document.getElementById('ingestResult').innerHTML = `
-                <div class="stat-card">
-                    <p>✅ Created: ${result.created_count || 0}</p>
-                    <p>🔄 Updated: ${result.updated_count || 0}</p>
-                    <p>⏭️ Skipped: ${result.skipped_count || 0}</p>
-                    ${result.warnings?.length ? `<p>⚠️ Warnings: ${result.warnings.join(', ')}</p>` : ''}
-                </div>
-            `;
+            try {
+                const data = await fetchAPI('/v1/ingest', {
+                    method: 'POST',
+                    body: JSON.stringify({ text, source, scope })
+                });
 
-            showToast('Ingest complete!');
-            document.getElementById('ingestText').value = '';
+                if (data.ingest_id) {
+                    pollIngestStatus(data.ingest_id);
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `<p style="color: var(--danger);">Error starting ingestion: ${e.message}</p>`;
+            }
+        }
+
+        async function pollIngestStatus(jobId) {
+            const resultDiv = document.getElementById('ingestResult');
+
+            try {
+                const data = await fetchAPI('/v1/ingest/' + jobId);
+
+                if (data.status === 'completed') {
+                    resultDiv.innerHTML = `
+                        <div class="memory-card" style="border-color: var(--success); background: rgba(16, 185, 129, 0.05);">
+                            <h4>✅ Ingestion Complete</h4>
+                            <p style="margin: 0.5rem 0;">Created: ${data.created_count}, Updated: ${data.updated_count}, Skipped: ${data.skipped_count}</p>
+                            ${data.warnings?.length ? `<p style="color: var(--warning); font-size: 0.8rem;">⚠️ ${data.warnings.join(', ')}</p>` : ''}
+                            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                                Memory IDs: ${data.memory_ids.join(', ')}
+                            </p>
+                        </div>
+                    `;
+                    showToast('Ingestion completed successfully');
+                    document.getElementById('ingestText').value = '';
+                    refreshMemories();
+                } else if (data.status === 'failed') {
+                    resultDiv.innerHTML = `
+                        <div class="memory-card" style="border-color: var(--danger); background: rgba(239, 68, 68, 0.05);">
+                            <h4>❌ Ingestion Failed</h4>
+                            <p style="margin-top: 0.5rem;">${data.errors.join(', ')}</p>
+                        </div>
+                    `;
+                    showToast('Ingestion failed', 'error');
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <span style="margin-left: 1rem;">AI analyzing memories (${data.status})...</span>
+                        </div>
+                    `;
+                    setTimeout(() => pollIngestStatus(jobId), 1500);
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `<p style="color: var(--danger);">Error polling status: ${e.message}</p>`;
+            }
         }
 
         // Force Create
@@ -882,13 +973,13 @@
         // Edit Modal
         async function openEditModal(id) {
             const data = await fetchAPI('/v1/memories/' + id);
-            
+
             document.getElementById('editId').value = id;
             document.getElementById('editContent').value = data.content;
             document.getElementById('editTags').value = (data.tags || []).join(', ');
             document.getElementById('editImportance').value = data.importance;
             document.getElementById('editConfidence').value = data.confidence;
-            
+
             document.getElementById('editModal').classList.add('active');
         }
 
@@ -942,4 +1033,5 @@
         });
     </script>
 </body>
+
 </html>

@@ -48,23 +48,29 @@ Output as JSON array:
 If no extractable information, return empty array: []
 """
 
+SYNTHESIS_PROMPT = """You are a context synthesizer. Based on the user's query and their stored memories, synthesize a helpful context summary.
+
+Provide:
+1. A concise summary paragraph
+2. Key bullet points for the AI to consider
+
+Output as JSON:
+{
+  "summary": "...",
+  "bullets": ["point 1", "point 2", ...]
+}
+"""
+
 
 async def extract_memories(text: str, source: Optional[str] = None) -> list[dict]:
-    """Extract structured memories from raw text.
-    
-    Args:
-        text: Raw input text to analyze
-        source: Optional source identifier
-        
-    Returns:
-        List of extracted memory dictionaries
-    """
-    model = genai.GenerativeModel(settings.llm_model)
-    
-    prompt = f"{EXTRACTION_PROMPT}\n\n---\nInput text:\n{text}"
+    """Extract structured memories from raw text."""
+    model = genai.GenerativeModel(
+        model_name=settings.llm_model,
+        system_instruction=EXTRACTION_PROMPT
+    )
     
     response = model.generate_content(
-        prompt,
+        f"Input text:\n{text}",
         generation_config=genai.GenerationConfig(
             response_mime_type="application/json",
             temperature=0.2,
@@ -103,17 +109,11 @@ async def synthesize_context(
     memories: list[dict],
     app_context: Optional[dict] = None,
 ) -> dict:
-    """Synthesize context from retrieved memories for RAG.
-    
-    Args:
-        query: User's current query/question
-        memories: List of retrieved memories
-        app_context: Optional application state
-        
-    Returns:
-        Synthesized context with summary and bullets
-    """
-    model = genai.GenerativeModel(settings.llm_model)
+    """Synthesize context from retrieved memories for RAG."""
+    model = genai.GenerativeModel(
+        model_name=settings.llm_model,
+        system_instruction=SYNTHESIS_PROMPT
+    )
     
     # Format memories for context
     memory_text = "\n".join([
@@ -125,25 +125,11 @@ async def synthesize_context(
     if app_context:
         context_text = f"\nApplication State: {json.dumps(app_context)}"
     
-    prompt = f"""Based on the user's query and their stored memories, synthesize a helpful context summary.
-
-User Query: {query}
+    prompt = f"""User Query: {query}
 {context_text}
 
 Relevant Memories:
 {memory_text}
-
-Provide:
-1. A concise summary paragraph
-2. Key bullet points for the AI to consider
-
-Output as JSON:
-```json
-{{
-  "summary": "...",
-  "bullets": ["point 1", "point 2", ...]
-}}
-```
 """
     
     response = model.generate_content(

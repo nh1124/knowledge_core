@@ -49,7 +49,7 @@ async def create_memory(
     )
     
     # Fetch the created memory
-    memory = await manager.get_memory(uuid.UUID(result["memory_id"]))
+    memory = await manager.get_memory(uuid.UUID(result["memory_id"]), user_id=user_id)
     if not memory:
         raise HTTPException(status_code=500, detail="Failed to create memory")
     
@@ -112,7 +112,11 @@ async def get_memory(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid memory ID format")
     
-    memory = await manager.get_memory(mid)
+    # In a real app, user_id would come from auth. 
+    # For now, we assume default if not provided (though RLS will still check).
+    uid = uuid.UUID("00000000-0000-0000-0000-000000000001")
+    
+    memory = await manager.get_memory(mid, user_id=uid)
     if not memory:
         raise HTTPException(status_code=404, detail="Memory not found")
     
@@ -133,8 +137,12 @@ async def update_memory(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid memory ID format")
     
+    # Use default user_id if not provided
+    uid = uuid.UUID("00000000-0000-0000-0000-000000000001")
+    
     updated = await manager.update_memory(
         memory_id=mid,
+        user_id=uid,
         content=request.content,
         tags=request.tags,
         importance=request.importance,
@@ -161,7 +169,10 @@ async def delete_memory(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid memory ID format")
     
-    deleted = await manager.delete_memory(mid, hard_delete=hard)
+    # Use default user_id if not provided
+    uid = uuid.UUID("00000000-0000-0000-0000-000000000001")
+    
+    deleted = await manager.delete_memory(mid, user_id=uid, hard_delete=hard)
     
     if not deleted:
         raise HTTPException(status_code=404, detail="Memory not found")

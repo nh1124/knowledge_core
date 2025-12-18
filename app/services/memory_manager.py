@@ -1,9 +1,10 @@
 """Memory Manager - Core logic for memory CRUD and deduplication."""
+import json
 import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import text, select
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import MemoryType, Scope, AuditAction, ActorType
@@ -13,12 +14,32 @@ from app.config import get_settings
 settings = get_settings()
 
 
+def _format_embedding(embedding: list[float]) -> str:
+    """Format embedding list as PostgreSQL vector string literal."""
+    # PostgreSQL pgvector expects format: '[0.1,0.2,...]'
+    return "[" + ",".join(f"{v:.8f}" for v in embedding) + "]"
+
+
+def _format_jsonb(data: Optional[dict]) -> Optional[str]:
+    """Format dict as JSON string for JSONB column."""
+    if data is None:
+        return None
+    return json.dumps(data)
+
+
 class MemoryManager:
     """Core memory management logic with deduplication and upsert strategies."""
     
     def __init__(self, session: AsyncSession):
         self.session = session
     
+    async def _apply_rls(self, user_id: uuid.UUID):
+        """Set session variable for PostgreSQL RLS."""
+        await self.session.execute(
+            text("SELECT set_config('app.current_user_id', :uid, true)"),
+            {"uid": str(user_id)}
+        )
+
     async def create_memory(
         self,
         content: str,
@@ -40,6 +61,9 @@ class MemoryManager:
         Returns:
             dict with keys: action (created/updated/skipped), memory_id, message
         """
+        # Set RLS context
+        await self._apply_rls(user_id)
+        
         tags = tags or []
         content_hash = compute_content_hash(content)
         
@@ -84,7 +108,7 @@ class MemoryManager:
                 "id": memory_id,
                 "user_id": user_id,
                 "content": content,
-                "embedding": str(embedding),
+                "embedding": _format_embedding(embedding),
                 "memory_type": memory_type.value,
                 "tags": tags,
                 "scope": scope.value,
@@ -95,7 +119,7 @@ class MemoryManager:
                 "input_channel": input_channel,
                 "content_hash": content_hash,
                 "event_time": event_time,
-                "related_entities": related_entities,
+                "related_entities": _format_jsonb(related_entities),
             }
         )
         
@@ -150,7 +174,7 @@ class MemoryManager:
         result = await self.session.execute(
             text("""
                 SELECT id, content, memory_type, 
-                       1 - (embedding <=> :embedding::vector) as similarity
+                       1 - (embedding <=> CAST(:embedding AS vector)) as similarity
                 FROM memories
                 WHERE user_id = :user_id 
                 AND scope = :scope 
@@ -158,11 +182,11 @@ class MemoryManager:
                 AND memory_type = :memory_type
                 AND valid_to IS NULL
                 AND embedding IS NOT NULL
-                ORDER BY embedding <=> :embedding::vector
+                ORDER BY embedding <=> CAST(:embedding AS vector)
                 LIMIT 1
             """),
             {
-                "embedding": str(embedding),
+                "embedding": _format_embedding(embedding),
                 "user_id": user_id,
                 "scope": scope.value,
                 "agent_id": agent_id,
@@ -214,7 +238,7 @@ class MemoryManager:
                     id, user_id, content, embedding, memory_type, tags, scope, agent_id,
                     importance, confidence, content_hash, supersedes_id
                 )
-                SELECT :new_id, user_id, :content, :embedding::vector, memory_type, 
+                SELECT :new_id, user_id, :content, CAST(:embedding AS vector), memory_type, 
                        :tags, scope, agent_id, :importance, :confidence, :content_hash, :supersedes_id
                 FROM memories WHERE id = :old_id
                 RETURNING id
@@ -222,7 +246,7 @@ class MemoryManager:
             {
                 "new_id": new_id,
                 "content": new_content,
-                "embedding": str(embedding),
+                "embedding": _format_embedding(embedding),
                 "tags": tags,
                 "importance": importance,
                 "confidence": confidence,
@@ -262,7 +286,7 @@ class MemoryManager:
                 "memory_id": memory_id,
                 "action": action.value,
                 "actor_type": actor_type.value,
-                "diff": diff,
+                "diff": _format_jsonb(diff),
             }
         )
     
@@ -278,6 +302,9 @@ class MemoryManager:
         limit: int = 50,
     ) -> list[dict]:
         """Search memories with optional vector similarity."""
+        # Set RLS context
+        await self._apply_rls(user_id)
+        
         conditions = ["valid_to IS NULL", "user_id = :user_id"]
         params = {"user_id": user_id, "limit": limit}
         
@@ -308,9 +335,9 @@ class MemoryManager:
         # Vector similarity search if query provided
         if query:
             embedding = await generate_embedding(query)
-            params["embedding"] = str(embedding)
-            select_cols += ", 1 - (embedding <=> :embedding::vector) as similarity"
-            order_by = "embedding <=> :embedding::vector"
+            params["embedding"] = _format_embedding(embedding)
+            select_cols += ", 1 - (embedding <=> CAST(:embedding AS vector)) as similarity"
+            order_by = "embedding <=> CAST(:embedding AS vector)"
         
         where_clause = " AND ".join(conditions)
         sql = f"""
@@ -324,7 +351,9 @@ class MemoryManager:
         result = await self.session.execute(text(sql), params)
         rows = result.fetchall()
         
+        now = datetime.now().astimezone()
         memories = []
+        
         for row in rows:
             mem = {
                 "id": str(row[0]),
@@ -337,14 +366,49 @@ class MemoryManager:
                 "confidence": row[7],
                 "created_at": row[8].isoformat() if row[8] else None,
             }
-            if query and len(row) > 9:
-                mem["similarity"] = row[9]
+            
+            # Base score from similarity or default
+            similarity = row[9] if (query and len(row) > 9) else 0.5
+            mem["similarity"] = similarity
+            
+            # Ranking Factors
+            # 1. Importance (1-5, normalized to 3)
+            importance_weight = mem["importance"] / 3.0
+            
+            # 2. Confidence (0-1)
+            confidence_weight = mem["confidence"]
+            
+            # 3. Recency Decay (Only for STATE and EPISODE)
+            decay_weight = 1.0
+            if mem["memory_type"] in [MemoryType.STATE.value, MemoryType.EPISODE.value]:
+                if row[8]: # created_at
+                    # Ensure both are offset-aware
+                    created_at = row[8]
+                    if created_at.tzinfo is None:
+                        created_at = created_at.replace(tzinfo=now.tzinfo)
+                    
+                    hours_old = (now - created_at).total_seconds() / 3600
+                    # Decay formula: 1 / (1 + rate * hours)
+                    # rate = 0.001 means ~50% score after 40 days
+                    decay_weight = 1.0 / (1.0 + 0.001 * hours_old)
+            
+            # Final Rank Score
+            # We call it 'score' to distinguish from raw similarity
+            mem["score"] = similarity * importance_weight * confidence_weight * decay_weight
+            
             memories.append(mem)
+        
+        # Re-sort by final score if it's a RAG query
+        if query:
+            memories.sort(key=lambda x: x["score"], reverse=True)
         
         return memories
     
-    async def get_memory(self, memory_id: uuid.UUID) -> Optional[dict]:
+    async def get_memory(self, memory_id: uuid.UUID, user_id: Optional[uuid.UUID] = None) -> Optional[dict]:
         """Get a single memory by ID."""
+        if user_id:
+            await self._apply_rls(user_id)
+            
         result = await self.session.execute(
             text("""
                 SELECT id, user_id, content, memory_type, tags, scope, agent_id,
@@ -374,12 +438,16 @@ class MemoryManager:
     async def update_memory(
         self,
         memory_id: uuid.UUID,
+        user_id: uuid.UUID,
         content: Optional[str] = None,
         tags: Optional[list[str]] = None,
         importance: Optional[int] = None,
         confidence: Optional[float] = None,
     ) -> Optional[dict]:
         """Update a memory's metadata."""
+        # Set RLS context
+        await self._apply_rls(user_id)
+        
         # Get current state for audit
         current = await self.get_memory(memory_id)
         if not current:
@@ -397,8 +465,8 @@ class MemoryManager:
             updates.append("content_hash = :content_hash")
             # Regenerate embedding
             embedding = await generate_embedding(content)
-            updates.append("embedding = :embedding::vector")
-            params["embedding"] = str(embedding)
+            updates.append("embedding = CAST(:embedding AS vector)")
+            params["embedding"] = _format_embedding(embedding)
             diff_before["content"] = current["content"]
             diff_after["content"] = content
         
@@ -439,8 +507,11 @@ class MemoryManager:
         
         return await self.get_memory(memory_id)
     
-    async def delete_memory(self, memory_id: uuid.UUID, hard_delete: bool = False) -> bool:
+    async def delete_memory(self, memory_id: uuid.UUID, user_id: uuid.UUID, hard_delete: bool = False) -> bool:
         """Delete a memory (soft delete by default)."""
+        # Set RLS context
+        await self._apply_rls(user_id)
+        
         if hard_delete:
             result = await self.session.execute(
                 text("DELETE FROM memories WHERE id = :id RETURNING id"),
