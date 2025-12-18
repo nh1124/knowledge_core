@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     similarity_threshold: float = 0.95
     default_search_limit: int = 50
     
+    # Logging Settings
+    log_level: str = "INFO"
+    log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    log_file: str = "logs/app.log"
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

@@ -17,8 +17,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.config import get_settings
 from app.routers import ingest, memories, context
 from app.dependencies import verify_api_key
+from app.logging_config import setup_logging
 
 settings = get_settings()
+logger = setup_logging()
 
 # Static files directory
 STATIC_DIR = Path(__file__).parent.parent / "static"
@@ -28,11 +30,11 @@ STATIC_DIR = Path(__file__).parent.parent / "static"
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
-    print("🧠 Antigravity Cortex starting...")
-    print(f"📁 Static files: {STATIC_DIR}")
+    logger.info("🧠 Antigravity Cortex starting...")
+    logger.info(f"📁 Static files: {STATIC_DIR}")
     yield
     # Shutdown
-    print("🧠 Antigravity Cortex shutting down...")
+    logger.info("🧠 Antigravity Cortex shutting down...")
 
 
 app = FastAPI(

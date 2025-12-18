@@ -8,12 +8,16 @@ from app.services.memory_manager import MemoryManager
 from app.services.job_manager import JobManager
 from app.schemas import IngestRequest, IngestResponse
 from app.models.enums import Scope
+from app.logging_config import get_logger
+
+logger = get_logger("ingest")
 
 router = APIRouter(prefix="/v1", tags=["Ingest"])
 
 
 async def background_ingest(job_id: str, request: IngestRequest):
     """Process extraction in the background."""
+    logger.info(f"Starting background ingest job: {job_id}")
     JobManager.update_job(job_id, status="processing")
     
     # We need a new session for background task
@@ -26,8 +30,11 @@ async def background_ingest(job_id: str, request: IngestRequest):
             extracted = await extract_memories(request.text, source=request.source)
             
             if not extracted:
+                logger.warning(f"No memories extracted for job {job_id}")
                 JobManager.update_job(job_id, status="completed", warnings=["No extractable information found"])
                 return
+
+            logger.info(f"Extracted {len(extracted)} memories for job {job_id}")
 
             manager = MemoryManager(db)
             created_count = 0
@@ -68,6 +75,7 @@ async def background_ingest(job_id: str, request: IngestRequest):
                     warnings.append(f"Error processing memory: {str(e)}")
                 
             await db.commit()
+            logger.info(f"Job {job_id} completed: {created_count} created, {updated_count} updated, {skipped_count} skipped")
             
             # Update job status
             JobManager.update_job(
@@ -81,6 +89,7 @@ async def background_ingest(job_id: str, request: IngestRequest):
             )
             
         except Exception as e:
+            logger.error(f"Error in background ingest job {job_id}: {str(e)}", exc_info=True)
             JobManager.update_job(job_id, status="failed", errors=[str(e)])
 
 

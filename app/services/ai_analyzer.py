@@ -6,6 +6,9 @@ import google.generativeai as genai
 
 from app.config import get_settings
 from app.models.enums import MemoryType
+from app.logging_config import get_logger
+
+logger = get_logger("ai_analyzer")
 
 settings = get_settings()
 
@@ -64,6 +67,7 @@ Output as JSON:
 
 async def extract_memories(text: str, source: Optional[str] = None) -> list[dict]:
     """Extract structured memories from raw text."""
+    logger.debug(f"Extracting memories from text (length: {len(text)})")
     model = genai.GenerativeModel(
         model_name=settings.llm_model,
         system_instruction=EXTRACTION_PROMPT
@@ -100,7 +104,7 @@ async def extract_memories(text: str, source: Optional[str] = None) -> list[dict
         
     except (json.JSONDecodeError, ValueError) as e:
         # Log error and return empty list
-        print(f"Error parsing AI response: {e}")
+        logger.error(f"Error parsing AI response: {e}")
         return []
 
 
@@ -110,6 +114,7 @@ async def synthesize_context(
     app_context: Optional[dict] = None,
 ) -> dict:
     """Synthesize context from retrieved memories for RAG."""
+    logger.debug(f"Synthesizing context for query with {len(memories)} memories")
     model = genai.GenerativeModel(
         model_name=settings.llm_model,
         system_instruction=SYNTHESIS_PROMPT
