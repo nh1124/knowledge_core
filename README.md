@@ -1,4 +1,4 @@
-# Antigravity Cortex (Knowledge Core)
+# Knowledge Core
 
 AI-powered knowledge management microservice for storing and retrieving user memories with vector search and context synthesis.
 
