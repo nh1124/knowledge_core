@@ -8,7 +8,9 @@ class Settings(BaseSettings):
     
     # Server
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = 8200
+    backend_port: int = 8200
+    frontend_port: int = 8201
     
     # Database
     database_url: str = "postgresql+asyncpg://cortex:cortex_password@localhost:5432/cortex_db"
