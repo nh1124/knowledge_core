@@ -14,6 +14,9 @@ if exist .env (
     for /f "usebackq eol=# tokens=*" %%i in (".env") do set %%i
 )
 
+REM Start docker-compose
+docker-compose up -d
+
 REM Start uvicorn with settings from environment
 if not defined HOST set HOST=0.0.0.0
 if not defined PORT set PORT=8000

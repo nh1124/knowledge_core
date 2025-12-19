@@ -360,15 +360,16 @@ class MemoryManager:
                 "user_id": str(row[1]),
                 "content": row[2],
                 "memory_type": row[3],
-                "scope": row[4],
-                "agent_id": row[5],
-                "importance": row[6],
-                "confidence": row[7],
-                "created_at": row[8].isoformat() if row[8] else None,
+                "tags": row[4],
+                "scope": row[5],
+                "agent_id": row[6],
+                "importance": row[7],
+                "confidence": row[8],
+                "created_at": row[9].isoformat() if row[9] else None,
             }
             
             # Base score from similarity or default
-            similarity = row[9] if (query and len(row) > 9) else 0.5
+            similarity = row[10] if (query and len(row) > 10) else 0.5
             mem["similarity"] = similarity
             
             # Ranking Factors
