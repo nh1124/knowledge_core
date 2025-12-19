@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.database import get_db
 from app.services.memory_manager import MemoryManager
 from app.services.ai_analyzer import synthesize_context
-from app.dependencies import resolve_user_id, resolve_scope_and_agent, request_warnings
+from app.dependencies import resolve_user_id, resolve_scope_and_agent, request_warnings, require_scope
 from app.schemas import ContextRequest, ContextResponse, ContextEvidenceItem, ScoreComponents
 router = APIRouter(prefix="/v1", tags=["Context"])
 
@@ -18,6 +18,7 @@ async def get_context(
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(resolve_user_id),
     scope_data: tuple = Depends(resolve_scope_and_agent),
+    _identity = Depends(require_scope("context")),
 ) -> ContextResponse:
     """Synthesize context from relevant memories using RAG.
     

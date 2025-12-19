@@ -94,7 +94,7 @@ async def background_ingest(job_id: str, request: IngestRequest):
             JobManager.update_job(job_id, status="failed", errors=[str(e)])
 
 
-from app.dependencies import resolve_user_id, resolve_scope_and_agent, request_warnings
+from app.dependencies import resolve_user_id, resolve_scope_and_agent, request_warnings, require_scope
 
 @router.post("/ingest", response_model=IngestResponse, status_code=status.HTTP_202_ACCEPTED)
 async def ingest_text(
@@ -102,6 +102,7 @@ async def ingest_text(
     background_tasks: BackgroundTasks,
     user_id: uuid.UUID = Depends(resolve_user_id),
     scope_data: tuple = Depends(resolve_scope_and_agent),
+    _identity = Depends(require_scope("ingest")),
 ) -> IngestResponse:
     """Analyze raw text in the background and create memories."""
     # Use resolved values
@@ -126,7 +127,7 @@ async def ingest_text(
     )
 
 
-@router.get("/ingest/{job_id}")
+@router.get("/ingest/{job_id}", dependencies=[Depends(require_scope("ingest"))])
 async def get_ingest_status(job_id: str):
     """Get status of an ingestion job."""
     job = JobManager.get_job(job_id)

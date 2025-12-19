@@ -14,7 +14,7 @@ from app.schemas import (
     MemoryListResponse,
 )
 from app.models.enums import MemoryType, Scope
-from app.dependencies import resolve_user_id, resolve_scope_and_agent, request_warnings
+from app.dependencies import resolve_user_id, resolve_scope_and_agent, request_warnings, require_scope
 
 router = APIRouter(prefix="/v1", tags=["Memories"])
 
@@ -25,6 +25,7 @@ async def create_memory(
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(resolve_user_id),
     scope_data: tuple = Depends(resolve_scope_and_agent),
+    _identity = Depends(require_scope("memories:write")),
 ) -> MemoryResponse:
     """Force/manual ingest - bypass AI analysis and directly create a memory.
     
@@ -68,6 +69,7 @@ async def list_memories(
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(resolve_user_id),
     scope_data: tuple = Depends(resolve_scope_and_agent),
+    _identity = Depends(require_scope("memories:read")),
 ) -> MemoryListResponse:
     """Search and retrieve memories.
     
@@ -105,6 +107,7 @@ async def get_memory(
     memory_id: str,
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(resolve_user_id),
+    _identity = Depends(require_scope("memories:read")),
 ) -> MemoryResponse:
     """Get a single memory by ID."""
     manager = MemoryManager(db)
@@ -129,6 +132,7 @@ async def update_memory(
     request: MemoryUpdateRequest,
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(resolve_user_id),
+    _identity = Depends(require_scope("memories:write")),
 ) -> MemoryResponse:
     """Update a memory's content, tags, importance, or confidence."""
     manager = MemoryManager(db)
@@ -161,6 +165,7 @@ async def delete_memory(
     hard: bool = Query(False, description="Hard delete (permanent)"),
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(resolve_user_id),
+    _identity = Depends(require_scope("memories:write")),
 ):
     """Delete a memory (soft delete by default)."""
     manager = MemoryManager(db)
@@ -188,6 +193,7 @@ async def dump_memories(
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(resolve_user_id),
     scope_data: tuple = Depends(resolve_scope_and_agent),
+    _identity = Depends(require_scope("dump")),
 ):
     """Export all memories (admin endpoint).
     

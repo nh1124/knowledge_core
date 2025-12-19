@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     skip_auth: bool = False
     debug: bool = True
     
+    # API Authorization Settings
+    kc_api_key_pepper: str = ""  # HMAC secret - REQUIRED in production
+    kc_enable_legacy_api_key: bool = True  # Fallback to .env API_KEY with warning
+    kc_require_api_key: bool = True  # Enforce key check even if legacy is disabled
+    
     # Embedding Settings
     embedding_model: str = "models/text-embedding-004"
     embedding_dimension: int = 768
