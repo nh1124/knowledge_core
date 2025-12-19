@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     # Google AI (Gemini)
     google_api_key: str = ""
     
-    # API Settings
     api_key: str = ""  # X-API-KEY for auth (optional for dev)
+    skip_auth: bool = False
     debug: bool = True
     
     # Embedding Settings
@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     log_file: str = "logs/app.log"
+    
+    # User ID Resolution
+    kc_require_user_id: bool = False
+    kc_default_user_id: str = "00000000-0000-0000-0000-000000000001"
     
     class Config:
         env_file = ".env"

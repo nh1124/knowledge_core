@@ -538,7 +538,7 @@
                 <h3>Configuration</h3>
                 <div class="form-group" style="padding: 0 1rem;">
                     <label style="font-size: 0.7rem;">API Key</label>
-                    <input type="password" id="apiKey" value="cortex_secret_key_2025"
+                    <input type="password" id="apiKey" value=""
                         style="padding: 0.4rem; font-size: 0.8rem; background: var(--bg-primary);">
                 </div>
             </nav>
@@ -628,6 +628,11 @@
                     </div>
                 </div>
 
+                <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                    <input type="checkbox" id="ingestSkipDedup" style="width: auto;">
+                    <label for="ingestSkipDedup" style="margin-bottom: 0;">Skip deduplication (force re-entry)</label>
+                </div>
+
                 <button class="btn" onclick="submitIngest()">🤖 Extract & Save Memories</button>
 
                 <div id="ingestResult" style="margin-top: 1.5rem;"></div>
@@ -666,6 +671,11 @@
                 <div class="form-group">
                     <label>Tags (comma separated)</label>
                     <input type="text" id="createTags" placeholder="tag1, tag2, tag3">
+                </div>
+
+                <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                    <input type="checkbox" id="createSkipDedup" style="width: auto;">
+                    <label for="createSkipDedup" style="margin-bottom: 0;">Skip deduplication (force create)</label>
                 </div>
 
                 <button class="btn" onclick="submitCreate()">💾 Create Memory</button>
@@ -883,10 +893,12 @@
             const resultDiv = document.getElementById('ingestResult');
             resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><span style="margin-left: 1rem;">Starting ingestion...</span></div>';
 
+            const skip_dedup = document.getElementById('ingestSkipDedup').checked;
+
             try {
                 const data = await fetchAPI('/v1/ingest', {
                     method: 'POST',
-                    body: JSON.stringify({ text, source, scope })
+                    body: JSON.stringify({ text, source, scope, skip_dedup })
                 });
 
                 if (data.ingest_id) {
@@ -951,9 +963,11 @@
                 return;
             }
 
+            const skip_dedup = document.getElementById('createSkipDedup').checked;
+
             await fetchAPI('/v1/memories', {
                 method: 'POST',
-                body: JSON.stringify({ content, memory_type, importance, tags, confidence: 1.0 })
+                body: JSON.stringify({ content, memory_type, importance, tags, confidence: 1.0, skip_dedup })
             });
 
             showToast('Memory created!');
@@ -985,11 +999,17 @@
                         <ul>${ctx.bullets.map(b => `<li>${b}</li>`).join('')}</ul>
                     ` : ''}
                     ${result.evidence?.length ? `
-                        <h4 style="margin-top: 1rem;">Evidence (${result.evidence.length} memories)</h4>
                         ${result.evidence.slice(0, 5).map(e => `
-                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.5rem 0;">
-                                📎 ${e.content.substring(0, 100)}... (${(e.score * 100).toFixed(1)}%)
-                            </p>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.8rem 0; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 0.4rem;">
+                                <p style="margin-bottom: 0.3rem;">📎 ${e.content.substring(0, 150)}...</p>
+                                <div style="display: flex; gap: 0.82rem; font-size: 0.72rem; opacity: 0.8;">
+                                    <span>🔍 Sim: ${(e.similarity * 100).toFixed(1)}%</span>
+                                    <span>🏆 Final: ${(e.final_score * 100).toFixed(1)}%</span>
+                                    ${e.score_components ? `
+                                        <span>⚡ Recency: ${e.score_components.recency_factor.toFixed(2)}</span>
+                                    ` : ''}
+                                </div>
+                            </div>
                         `).join('')}
                     ` : ''}
                 </div>

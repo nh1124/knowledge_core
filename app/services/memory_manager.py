@@ -399,6 +399,11 @@ class MemoryManager:
             # Final Rank Score
             # We call it 'score' to distinguish from raw similarity
             mem["score"] = similarity * importance_weight * confidence_weight * decay_weight
+            mem["score_components"] = {
+                "importance": importance_weight,
+                "confidence": confidence_weight,
+                "recency_factor": decay_weight
+            }
             
             memories.append(mem)
         

@@ -57,6 +57,7 @@ async def background_ingest(job_id: str, request: IngestRequest):
                         source=request.source,
                         input_channel="chat" if request.source == "chat" else "api",
                         event_time=request.event_time,
+                        skip_dedup=request.skip_dedup,
                     )
                     
                     if result["action"] == "created":
@@ -93,22 +94,35 @@ async def background_ingest(job_id: str, request: IngestRequest):
             JobManager.update_job(job_id, status="failed", errors=[str(e)])
 
 
+from app.dependencies import resolve_user_id, resolve_scope_and_agent, request_warnings
+
 @router.post("/ingest", response_model=IngestResponse, status_code=status.HTTP_202_ACCEPTED)
 async def ingest_text(
     request: IngestRequest,
     background_tasks: BackgroundTasks,
+    user_id: uuid.UUID = Depends(resolve_user_id),
+    scope_data: tuple = Depends(resolve_scope_and_agent),
 ) -> IngestResponse:
     """Analyze raw text in the background and create memories."""
+    # Use resolved values
+    scope, agent_id = scope_data
+    request.user_id = user_id
+    request.scope = scope
+    request.agent_id = agent_id
+
     job_id = JobManager.create_job()
     background_tasks.add_task(background_ingest, job_id, request)
     
+    warnings = ["Processing started in background"]
+    warnings.extend(request_warnings.get())
+
     return IngestResponse(
         ingest_id=job_id,
         created_count=0,
         updated_count=0,
         skipped_count=0,
         memory_ids=[],
-        warnings=["Processing started in background"]
+        warnings=warnings
     )
 
 

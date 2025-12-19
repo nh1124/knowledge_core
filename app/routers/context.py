@@ -8,15 +8,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.database import get_db
 from app.services.memory_manager import MemoryManager
 from app.services.ai_analyzer import synthesize_context
-from app.schemas import ContextRequest, ContextResponse, ContextEvidenceItem
-
+from app.dependencies import resolve_user_id, resolve_scope_and_agent, request_warnings
+from app.schemas import ContextRequest, ContextResponse, ContextEvidenceItem, ScoreComponents
 router = APIRouter(prefix="/v1", tags=["Context"])
-
 
 @router.post("/context", response_model=ContextResponse)
 async def get_context(
     request: ContextRequest,
     db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(resolve_user_id),
+    scope_data: tuple = Depends(resolve_scope_and_agent),
 ) -> ContextResponse:
     """Synthesize context from relevant memories using RAG.
     
@@ -25,17 +26,15 @@ async def get_context(
     2. Re-rank by importance, recency, and confidence
     3. AI synthesizes a context summary for the calling agent
     """
-    # Use default user_id if not provided
-    user_id = request.user_id or uuid.UUID("00000000-0000-0000-0000-000000000001")
-    
+    scope, agent_id = scope_data
     manager = MemoryManager(db)
     
     # Search for relevant memories
     memories = await manager.search_memories(
         user_id=user_id,
         query=request.query,
-        scope=request.scope,
-        agent_id=request.agent_id,
+        scope=scope,
+        agent_id=agent_id,
         include_global=request.include_global,
         limit=request.k,
     )
@@ -47,6 +46,7 @@ async def get_context(
                 "bullets": [],
             },
             evidence=[] if request.return_evidence else None,
+            warnings=request_warnings.get()
         )
     
     # Synthesize context using AI
@@ -62,8 +62,14 @@ async def get_context(
         evidence = [
             ContextEvidenceItem(
                 memory_id=m["id"],
-                score=m.get("similarity", 0.0),
+                similarity=m.get("similarity", 0.0),
+                final_score=m.get("score", 0.0),
                 content=m["content"],
+                score_components=ScoreComponents(
+                    importance=m.get("score_components", {}).get("importance", 0.0),
+                    confidence=m.get("score_components", {}).get("confidence", 0.0),
+                    recency_factor=m.get("score_components", {}).get("recency_factor", 1.0),
+                ) if "score_components" in m else None
             )
             for m in memories
         ]
@@ -71,4 +77,5 @@ async def get_context(
     return ContextResponse(
         context=context,
         evidence=evidence,
+        warnings=request_warnings.get()
     )

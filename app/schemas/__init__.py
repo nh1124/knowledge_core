@@ -19,6 +19,7 @@ class IngestRequest(BaseModel):
     scope: Scope = Field(default=Scope.GLOBAL, description="Memory scope")
     event_time: Optional[datetime] = Field(None, description="Event occurrence time")
     metadata: Optional[dict] = Field(None, description="Additional metadata")
+    skip_dedup: bool = Field(default=False, description="Skip deduplication check")
 
 
 class IngestResponse(BaseModel):
@@ -44,6 +45,7 @@ class MemoryCreateRequest(BaseModel):
     importance: int = Field(default=3, ge=1, le=5, description="Priority 1-5")
     confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Confidence")
     source: Optional[str] = Field(None, description="Information source")
+    skip_dedup: bool = Field(default=False, description="Skip deduplication check")
 
 
 class MemoryUpdateRequest(BaseModel):
@@ -69,6 +71,7 @@ class MemoryResponse(BaseModel):
     event_time: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class MemoryListResponse(BaseModel):
@@ -76,6 +79,7 @@ class MemoryListResponse(BaseModel):
     memories: list[MemoryResponse]
     total: int
     cursor: Optional[str] = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 # ==================== Context (RAG) Schemas ====================
@@ -92,28 +96,24 @@ class ContextRequest(BaseModel):
     return_evidence: bool = Field(default=False, description="Return source memory IDs")
 
 
+class ScoreComponents(BaseModel):
+    """Detailed score components."""
+    importance: float
+    confidence: float
+    recency_factor: float
+
+
 class ContextEvidenceItem(BaseModel):
     """Evidence item in context response."""
     memory_id: str
-    score: float
+    similarity: float
+    final_score: float
     content: str
+    score_components: Optional[ScoreComponents] = None
 
 
 class ContextResponse(BaseModel):
     """Response body for POST /v1/context."""
     context: dict = Field(..., description="Synthesized context with summary and bullets")
     evidence: Optional[list[ContextEvidenceItem]] = Field(None, description="Source memories")
-
-
-# ==================== Error Schemas ====================
-
-class ErrorDetail(BaseModel):
-    """Error detail."""
-    code: str
-    message: str
-    details: Optional[dict] = None
-
-
-class ErrorResponse(BaseModel):
-    """Standard error response."""
-    error: ErrorDetail
+    warnings: list[str] = Field(default_factory=list)

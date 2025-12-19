@@ -88,7 +88,7 @@ async def unified_exception_handler(request: Request, exc: Exception):
 
 
 # Include routers with security dependency
-api_dependencies = [Depends(verify_api_key)] if not os.getenv("SKIP_AUTH") else []
+api_dependencies = [Depends(verify_api_key)] if not settings.skip_auth else []
 app.include_router(ingest.router, dependencies=api_dependencies)
 app.include_router(memories.router, dependencies=api_dependencies)
 app.include_router(context.router, dependencies=api_dependencies)
