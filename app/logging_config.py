@@ -17,7 +17,7 @@ def setup_logging():
         format=settings.log_format,
         handlers=[
             logging.StreamHandler(sys.stdout),
-            logging.FileHandler(settings.log_file)
+            logging.FileHandler(settings.log_file, encoding='utf-8')
         ],
         force=True # Override any existing configuration
     )

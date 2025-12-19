@@ -30,11 +30,11 @@ STATIC_DIR = Path(__file__).parent.parent / "static"
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
-    logger.info("🧠 Antigravity Cortex starting...")
-    logger.info(f"📁 Static files: {STATIC_DIR}")
+    logger.info("Antigravity Cortex starting...")
+    logger.info(f"Static files: {STATIC_DIR}")
     yield
     # Shutdown
-    logger.info("🧠 Antigravity Cortex shutting down...")
+    logger.info("Antigravity Cortex shutting down...")
 
 
 app = FastAPI(
