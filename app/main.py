@@ -15,7 +15,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
-from app.routers import ingest, memories, context
+from app.routers import ingest, memories, context, auth
 from app.dependencies import verify_api_key
 from app.logging_config import setup_logging
 
@@ -92,6 +92,7 @@ api_dependencies = [Depends(verify_api_key)] if not settings.skip_auth else []
 app.include_router(ingest.router, dependencies=api_dependencies)
 app.include_router(memories.router, dependencies=api_dependencies)
 app.include_router(context.router, dependencies=api_dependencies)
+app.include_router(auth.router, dependencies=api_dependencies)
 
 
 # Memory Gardener UI
