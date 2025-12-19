@@ -330,7 +330,7 @@ class MemoryManager:
         
         # Build query
         order_by = "created_at DESC"
-        select_cols = "id, content, memory_type, tags, scope, agent_id, importance, confidence, created_at"
+        select_cols = "id, user_id, content, memory_type, tags, scope, agent_id, importance, confidence, created_at"
         
         # Vector similarity search if query provided
         if query:
@@ -357,9 +357,9 @@ class MemoryManager:
         for row in rows:
             mem = {
                 "id": str(row[0]),
-                "content": row[1],
-                "memory_type": row[2],
-                "tags": row[3],
+                "user_id": str(row[1]),
+                "content": row[2],
+                "memory_type": row[3],
                 "scope": row[4],
                 "agent_id": row[5],
                 "importance": row[6],

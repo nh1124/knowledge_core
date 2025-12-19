@@ -57,6 +57,7 @@ class MemoryUpdateRequest(BaseModel):
 class MemoryResponse(BaseModel):
     """Response body for memory endpoints."""
     id: str
+    user_id: str
     content: str
     memory_type: str
     tags: list[str]

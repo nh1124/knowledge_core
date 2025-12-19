@@ -824,6 +824,7 @@
                     </div>
                     <div class="memory-content">${mem.content}</div>
                     <div class="memory-meta">
+                        <span>👤 User: ${mem.user_id.substring(0, 8)}...</span>
                         <span>📊 Importance: ${mem.importance}</span>
                         <span>🎯 Confidence: ${(mem.confidence * 100).toFixed(0)}%</span>
                         ${mem.similarity ? `<span>🔍 Match: ${(mem.similarity * 100).toFixed(1)}%</span>` : ''}
