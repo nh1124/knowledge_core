@@ -524,11 +524,6 @@
                     <input type="password" id="apiKey" value="cortex_secret_key_2025"
                         style="padding: 0.4rem; font-size: 0.8rem; background: var(--bg-primary);">
                 </div>
-                <div class="form-group" style="padding: 0 1rem;">
-                    <label style="font-size: 0.7rem;">API Base URL</label>
-                    <input type="text" id="apiBase" value="" placeholder="http://localhost:8200"
-                        style="padding: 0.4rem; font-size: 0.8rem; background: var(--bg-primary);">
-                </div>
             </nav>
             <nav class="nav-section">
                 <h3>Navigation</h3>
@@ -720,14 +715,7 @@
     </div>
 
     <script>
-        // API Configuration initialization
-        const defaultApiBase = window.location.port === '8201' ? 'http://localhost:8200' : window.location.origin;
-        document.getElementById('apiBase').value = defaultApiBase;
-
-        function getApiBase() {
-            return document.getElementById('apiBase').value || defaultApiBase;
-        }
-
+        const API_BASE = window.location.origin;
         let currentFilter = '';
 
         // Navigation
@@ -763,7 +751,7 @@
         async function fetchAPI(endpoint, options = {}) {
             const apiKey = document.getElementById('apiKey').value;
             try {
-                const response = await fetch(getApiBase() + endpoint, {
+                const response = await fetch(API_BASE + endpoint, {
                     headers: {
                         'Content-Type': 'application/json',
                         'X-API-KEY': apiKey

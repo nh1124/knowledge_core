@@ -15,26 +15,17 @@ if exist .env (
 )
 
 REM Start uvicorn with settings from environment
-REM Port can be configured via BACKEND_PORT env variable (default: 8000)
-set HOST=0.0.0.0
-if not defined BACKEND_PORT (
-    if defined PORT (
-        set BACKEND_PORT=%PORT%
-    ) else (
-        set BACKEND_PORT=8000
-    )
-)
+if not defined HOST set HOST=0.0.0.0
+if not defined PORT set PORT=8000
 
-echo Starting backend on %HOST%:%BACKEND_PORT%...
+echo.
+echo TIP: Ensure your database is running (e.g., docker-compose up -d)
+echo.
 
-REM Check if we should start a separate frontend server
-if defined FRONTEND_PORT (
-    if NOT "%FRONTEND_PORT%"=="%BACKEND_PORT%" (
-        echo Starting frontend on %HOST%:%FRONTEND_PORT%...
-        start /b python -m http.server %FRONTEND_PORT% --bind %HOST% --directory static
-    )
-)
+echo Starting Antigravity Cortex on %HOST%:%PORT%...
+echo UI will be available at http://localhost:%PORT%/ui
+echo.
 
-uvicorn app.main:app --host %HOST% --port %BACKEND_PORT% --reload
+uvicorn app.main:app --host %HOST% --port %PORT% --reload
 
 pause
