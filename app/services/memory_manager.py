@@ -330,7 +330,7 @@ class MemoryManager:
         
         # Build query
         order_by = "created_at DESC"
-        select_cols = "id, user_id, content, memory_type, tags, scope, agent_id, importance, confidence, created_at"
+        select_cols = "id, user_id, content, memory_type, tags, scope, agent_id, importance, confidence, source, event_time, created_at, updated_at"
         
         # Vector similarity search if query provided
         if query:
@@ -365,11 +365,14 @@ class MemoryManager:
                 "agent_id": row[6],
                 "importance": row[7],
                 "confidence": row[8],
-                "created_at": row[9].isoformat() if row[9] else None,
+                "source": row[9],
+                "event_time": row[10].isoformat() if row[10] else None,
+                "created_at": row[11].isoformat() if row[11] else None,
+                "updated_at": row[12].isoformat() if row[12] else None,
             }
             
             # Base score from similarity or default
-            similarity = row[10] if (query and len(row) > 10) else 0.5
+            similarity = row[13] if (query and len(row) > 13) else 0.5
             mem["similarity"] = similarity
             
             # Ranking Factors
@@ -382,9 +385,9 @@ class MemoryManager:
             # 3. Recency Decay (Only for STATE and EPISODE)
             decay_weight = 1.0
             if mem["memory_type"] in [MemoryType.STATE.value, MemoryType.EPISODE.value]:
-                if row[9]: # created_at
+                if row[11]: # created_at
                     # Ensure both are offset-aware
-                    created_at = row[9]
+                    created_at = row[11]
                     if created_at.tzinfo is None:
                         created_at = created_at.replace(tzinfo=now.tzinfo)
                     
@@ -413,7 +416,7 @@ class MemoryManager:
         result = await self.session.execute(
             text("""
                 SELECT id, user_id, content, memory_type, tags, scope, agent_id,
-                       importance, confidence, source, created_at, updated_at
+                       importance, confidence, source, event_time, created_at, updated_at
                 FROM memories WHERE id = :id
             """),
             {"id": memory_id}
@@ -431,8 +434,9 @@ class MemoryManager:
                 "importance": row[7],
                 "confidence": row[8],
                 "source": row[9],
-                "created_at": row[10].isoformat() if row[10] else None,
-                "updated_at": row[11].isoformat() if row[11] else None,
+                "event_time": row[10].isoformat() if row[10] else None,
+                "created_at": row[11].isoformat() if row[11] else None,
+                "updated_at": row[12].isoformat() if row[12] else None,
             }
         return None
     

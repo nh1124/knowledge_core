@@ -66,6 +66,7 @@ class MemoryResponse(BaseModel):
     importance: int
     confidence: float
     source: Optional[str] = None
+    event_time: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 

@@ -290,10 +290,27 @@
 
         .memory-meta {
             display: flex;
-            gap: 1rem;
+            gap: 1.5rem;
             flex-wrap: wrap;
             font-size: 0.8rem;
             color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .memory-dates {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            opacity: 0.8;
+            margin-bottom: 1rem;
+            font-family: monospace;
+        }
+
+        .memory-meta b {
+            color: var(--accent);
+            font-weight: 500;
         }
 
         .memory-tags {
@@ -824,10 +841,18 @@
                     </div>
                     <div class="memory-content">${mem.content}</div>
                     <div class="memory-meta">
-                        <span>👤 User: ${mem.user_id.substring(0, 8)}...</span>
-                        <span>📊 Importance: ${mem.importance}</span>
-                        <span>🎯 Confidence: ${(mem.confidence * 100).toFixed(0)}%</span>
-                        ${mem.similarity ? `<span>🔍 Match: ${(mem.similarity * 100).toFixed(1)}%</span>` : ''}
+                        <span>👤 <b>User:</b> ${mem.user_id.substring(0, 8)}...</span>
+                        <span>🌐 <b>Scope:</b> ${mem.scope}${mem.agent_id ? ` (${mem.agent_id})` : ''}</span>
+                        <span>📍 <b>Source:</b> ${mem.source || 'N/A'}</span>
+                    </div>
+                    <div class="memory-meta">
+                        <span>📊 <b>Importance:</b> ${mem.importance}</span>
+                        <span>🎯 <b>Confidence:</b> ${(mem.confidence * 100).toFixed(0)}%</span>
+                        ${mem.similarity ? `<span>🔍 <b>Match:</b> ${(mem.similarity * 100).toFixed(1)}%</span>` : ''}
+                    </div>
+                    <div class="memory-dates">
+                        <span>📅 <b>Created:</b> ${new Date(mem.created_at).toLocaleString()}</span>
+                        ${mem.event_time ? `<span>⏱️ <b>Event:</b> ${new Date(mem.event_time).toLocaleString()}</span>` : ''}
                     </div>
                     <div class="memory-tags">
                         ${(mem.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('')}
