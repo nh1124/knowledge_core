@@ -382,9 +382,9 @@ class MemoryManager:
             # 3. Recency Decay (Only for STATE and EPISODE)
             decay_weight = 1.0
             if mem["memory_type"] in [MemoryType.STATE.value, MemoryType.EPISODE.value]:
-                if row[8]: # created_at
+                if row[9]: # created_at
                     # Ensure both are offset-aware
-                    created_at = row[8]
+                    created_at = row[9]
                     if created_at.tzinfo is None:
                         created_at = created_at.replace(tzinfo=now.tzinfo)
                     
