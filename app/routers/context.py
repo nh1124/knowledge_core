@@ -10,6 +10,8 @@ from app.services.memory_manager import MemoryManager
 from app.services.ai_analyzer import synthesize_context
 from app.dependencies import resolve_user_id, resolve_scope_and_agent, request_warnings, require_scope
 from app.schemas import ContextRequest, ContextResponse, ContextEvidenceItem, ScoreComponents
+from app.auth import Identity, resolve_identity
+
 router = APIRouter(prefix="/v1", tags=["Context"])
 
 @router.post("/context", response_model=ContextResponse)
@@ -18,7 +20,7 @@ async def get_context(
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(resolve_user_id),
     scope_data: tuple = Depends(resolve_scope_and_agent),
-    _identity = Depends(require_scope("context")),
+    identity: Identity = Depends(require_scope("context")),
 ) -> ContextResponse:
     """Synthesize context from relevant memories using RAG.
     
@@ -30,7 +32,10 @@ async def get_context(
     scope, agent_id = scope_data
     manager = MemoryManager(db)
     
-    # Search for relevant memories
+    # Get user's Gemini API key
+    api_key = identity.gemini_api_key
+    
+    # Search for relevant memories (with user's key for embedding)
     memories = await manager.search_memories(
         user_id=user_id,
         query=request.query,
@@ -38,6 +43,7 @@ async def get_context(
         agent_id=agent_id,
         include_global=request.include_global,
         limit=request.k,
+        api_key=api_key,
     )
     
     if not memories:
@@ -50,11 +56,12 @@ async def get_context(
             warnings=request_warnings.get()
         )
     
-    # Synthesize context using AI
+    # Synthesize context using AI (with user's key)
     context = await synthesize_context(
         query=request.query,
         memories=memories,
         app_context=request.app_context,
+        api_key=api_key,
     )
     
     # Build evidence list if requested

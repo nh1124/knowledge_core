@@ -52,12 +52,6 @@ async def generate_embeddings(texts: list[str], api_key: Optional[str] = None) -
         embeddings.append(embedding)
     return embeddings
 
-
-class GeminiKeyMissingError(Exception):
-    """Raised when a Gemini API key is required but not configured."""
-    pass
-
-
 def compute_content_hash(content: str) -> str:
     """Compute hash of normalized content for deduplication.
     
