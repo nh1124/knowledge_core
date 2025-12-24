@@ -629,6 +629,47 @@
         body.authorized {
             overflow: auto;
         }
+
+        /* Settings Styles */
+        .settings-section {
+            background: var(--bg-secondary);
+            border-radius: 0.8rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .settings-section h3 {
+            margin-bottom: 1.2rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .key-list {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .key-list th,
+        .key-list td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .key-list th {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .danger-zone {
+            border-color: rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.05);
+        }
     </style>
 </head>
 
@@ -638,10 +679,14 @@
         <div class="auth-card">
             <div class="logo-icon" style="font-size: 3rem; margin-bottom: 1rem;">🌳</div>
             <h2>Knowledge Core</h2>
-            <p>Enter your API key to access your memories.</p>
-
+            <p>Please login to access your memories.</p>
             <div class="auth-input-group">
-                <input type="password" id="loginKey" class="auth-input" placeholder="kc_..." autofocus>
+                <label>Email Address</label>
+                <input type="email" id="loginEmail" class="auth-input" placeholder="email@example.com" autofocus>
+            </div>
+            <div class="auth-input-group">
+                <label>Password</label>
+                <input type="password" id="loginPass" class="auth-input" placeholder="••••••••">
             </div>
 
             <div class="auth-actions">
@@ -651,20 +696,28 @@
                     style="color: var(--danger); font-size: 0.85rem; margin-top: 0.5rem; display: none;"></div>
             </div>
 
-            <a class="key-gen-link" onclick="toggleKeyGen()">Need a new key?</a>
+            <a class="key-gen-link" onclick="toggleRegister()">Create a new account</a>
 
-            <!-- Key Generation (hidden by default) -->
-            <div id="keyGenSection"
+            <!-- Registration Section (hidden by default) -->
+            <div id="registerSection"
                 style="display: none; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
-                <p style="font-size: 0.85rem;">To create a new key, enter the master key/legacy key.</p>
+                <p style="font-size: 0.85rem; margin-bottom: 1rem;">Create an account to secure your memories.</p>
+
                 <div class="auth-input-group">
-                    <input type="password" id="masterKeyInput" class="auth-input" placeholder="Master Key">
+                    <label>Full Name</label>
+                    <input type="text" id="registerName" class="auth-input" placeholder="Name">
                 </div>
                 <div class="auth-input-group">
-                    <input type="text" id="newKeyName" class="auth-input" placeholder="Device/App Name (e.g. Mobile)">
+                    <label>Email Address</label>
+                    <input type="email" id="registerEmail" class="auth-input" placeholder="email@example.com">
                 </div>
-                <button class="btn btn-secondary" style="width: 100%;" onclick="requestNewKey()">Generate API
-                    Key</button>
+                <div class="auth-input-group">
+                    <label>Password</label>
+                    <input type="password" id="registerPass" class="auth-input" placeholder="••••••••">
+                </div>
+
+                <button class="btn btn-secondary" style="width: 100%;" onclick="registerAccount()">Create
+                    Account</button>
             </div>
         </div>
     </div>
@@ -698,6 +751,7 @@
                 <button class="nav-btn" data-panel="ingest">📝 AI Ingest</button>
                 <button class="nav-btn" data-panel="create">➕ Force Create</button>
                 <button class="nav-btn" data-panel="context">💬 Context (RAG)</button>
+                <button class="nav-btn" data-panel="settings" onclick="loadSettings()">⚙️ Settings</button>
             </nav>
             <nav class="nav-section">
                 <h3>Filters</h3>
@@ -848,6 +902,116 @@
 
                 <div id="contextResult" style="margin-top: 1.5rem;"></div>
             </div>
+
+            <!-- Settings Panel -->
+            <div id="settings-panel" class="panel">
+                <div class="panel-header">
+                    <h2>Settings</h2>
+                </div>
+
+                <!-- API Key Management -->
+                <div class="settings-section">
+                    <h3>🔑 API Key Management</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+                        Generate API keys for external applications to access Knowledge Core.
+                    </p>
+                    <div class="form-row" style="align-items: flex-end;">
+                        <div class="form-group">
+                            <label>Key Name</label>
+                            <input type="text" id="newKeyName" placeholder="My Mobile App">
+                        </div>
+                        <div class="form-group">
+                            <label>Client ID</label>
+                            <input type="text" id="newKeyClient" placeholder="mobile_app_1">
+                        </div>
+                        <button class="btn" style="height: 2.5rem;" onclick="generateKey()">Generate Key</button>
+                    </div>
+
+                    <div id="newKeyDisplay"
+                        style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 0.5rem; border: 1px solid var(--success);">
+                        <p style="font-size: 0.75rem; color: var(--success); margin-bottom: 0.5rem;">Copy this key now.
+                            It won't be shown again!</p>
+                        <code id="newKeyValue"
+                            style="font-size: 1rem; font-weight: bold; word-break: break-all;"></code>
+                    </div>
+
+                    <table class="key-list">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Client ID</th>
+                                <th>Created</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="apiKeyTableBody">
+                            <!-- Keys loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- External Service Configuration (Admin Only) -->
+                <div id="adminConfigSection" class="settings-section" style="display: none;">
+                    <h3>🌐 System Configuration</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+                        Configure global system settings. Changes modify the .env file.
+                    </p>
+                    <div class="form-group">
+                        <label>Google API Key (Gemini)</label>
+                        <input type="password" id="sysGoogleKey" placeholder="AIza...">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Log Level</label>
+                            <select id="sysLogLevel">
+                                <option value="INFO">INFO</option>
+                                <option value="DEBUG">DEBUG</option>
+                                <option value="WARNING">WARNING</option>
+                                <option value="ERROR">ERROR</option>
+                            </select>
+                        </div>
+                        <div class="form-group"
+                            style="display: flex; align-items: center; gap: 0.5rem; padding-top: 1.5rem;">
+                            <input type="checkbox" id="sysDebug" style="width: auto;">
+                            <label for="sysDebug" style="margin-bottom: 0;">Debug Mode</label>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="saveSystemConfig()">Save Configuration</button>
+                </div>
+
+                <!-- User Profile Settings -->
+                <div class="settings-section">
+                    <h3>👤 User Profile</h3>
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <input type="password" id="changePassCurrent" placeholder="••••••••">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="changePassNew" placeholder="••••••••">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="changePassConfirm" placeholder="••••••••">
+                        </div>
+                    </div>
+                    <button class="btn" onclick="changePassword()">Update Password</button>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="settings-section danger-zone">
+                    <h3 style="color: var(--danger);">⚠️ Danger Zone</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+                        Deleting your account will permanently remove all your memories and API keys. This action cannot
+                        be undone.
+                    </p>
+                    <button class="btn btn-secondary"
+                        style="background: var(--danger); border-color: var(--danger); color: white;"
+                        onclick="deleteMyAccount()">Delete Account Permanently</button>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -925,13 +1089,22 @@
 
         // API Calls
         async function fetchAPI(endpoint, options = {}) {
+            const token = localStorage.getItem('kc_token');
             const apiKey = document.getElementById('apiKey').value || localStorage.getItem('kc_api_key');
+
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            } else if (apiKey) {
+                headers['X-API-KEY'] = apiKey;
+            }
+
             try {
                 const response = await fetch(API_BASE + endpoint, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-KEY': apiKey
-                    },
+                    headers: headers,
                     ...options
                 });
 
@@ -965,26 +1138,31 @@
 
         // Auth Flow
         async function attemptLogin() {
-            const keyInput = document.getElementById('loginKey');
-            const key = keyInput.value.trim();
+            const emailInput = document.getElementById('loginEmail');
+            const passInput = document.getElementById('loginPass');
+            const email = emailInput.value.trim();
+            const password = passInput.value;
             const errorEl = document.getElementById('loginError');
 
-            if (!key) return;
+            if (!email || !password) return;
 
             errorEl.style.display = 'none';
 
             try {
-                // Test the key with health check or memories
-                const response = await fetch(API_BASE + '/v1/memories?limit=1', {
-                    headers: { 'X-API-KEY': key }
+                const response = await fetch(API_BASE + '/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
                 });
 
                 if (response.ok) {
-                    localStorage.setItem('kc_api_key', key);
-                    document.getElementById('apiKey').value = key;
+                    const data = await response.json();
+                    localStorage.setItem('kc_token', data.access_token);
+                    localStorage.setItem('kc_user_id', data.user_id);
                     enterWorkspace();
                 } else {
-                    errorEl.textContent = 'Invalid API key. Please try again.';
+                    const error = await response.json().catch(() => ({}));
+                    errorEl.textContent = error.error?.message || 'Invalid email or password.';
                     errorEl.style.display = 'block';
                 }
             } catch (e) {
@@ -1004,47 +1182,42 @@
         }
 
         function logout() {
+            localStorage.removeItem('kc_token');
+            localStorage.removeItem('kc_user_id');
             localStorage.removeItem('kc_api_key');
             location.reload();
         }
 
-        function toggleKeyGen() {
-            const section = document.getElementById('keyGenSection');
+        function toggleRegister() {
+            const section = document.getElementById('registerSection');
             section.style.display = section.style.display === 'none' ? 'block' : 'none';
         }
 
-        async function requestNewKey() {
-            const masterKey = document.getElementById('masterKeyInput').value;
-            const name = document.getElementById('newKeyName').value || 'Web UI User';
+        async function registerAccount() {
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPass').value;
+            const name = document.getElementById('registerName').value || 'New User';
 
-            if (!masterKey) {
-                alert('Master key required for generation.');
+            if (!email || !password) {
+                alert('Email and password are required.');
                 return;
             }
 
             try {
-                const response = await fetch(API_BASE + '/v1/auth/keys', {
+                const response = await fetch(API_BASE + '/v1/auth/register', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-KEY': masterKey
-                    },
-                    body: JSON.stringify({
-                        name: name,
-                        client_id: 'web_ui_' + Math.random().toString(36).substring(7),
-                        scopes: ["memories:read", "memories:write", "context", "ingest"],
-                        is_admin: false
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, name })
                 });
 
                 if (response.ok) {
-                    const data = await response.json();
-                    alert('New API Key Generated!\n\n' + data.api_key + '\n\nPlease copy this key now. It will not be shown again.');
-                    document.getElementById('loginKey').value = data.api_key;
-                    toggleKeyGen();
+                    alert('Account created successfully! You can now login.');
+                    document.getElementById('loginEmail').value = email;
+                    document.getElementById('loginPass').value = password;
+                    toggleRegister();
                 } else {
                     const error = await response.json();
-                    alert('Failed to generate key: ' + (error.error?.message || 'Check master key'));
+                    alert('Failed to create account: ' + (error.error?.message || 'Please try another email.'));
                 }
             } catch (e) {
                 alert('Error connecting to server.');
@@ -1313,6 +1486,166 @@
             refreshMemories();
         }
 
+        // Settings Logic
+        async function loadSettings() {
+            try {
+                // 1. Check if Admin to show/hide system config
+                const profile = await fetchAPI('/v1/auth/me');
+                const adminSection = document.getElementById('adminConfigSection');
+
+                if (profile.is_admin) {
+                    adminSection.style.display = 'block';
+                    loadSystemConfig();
+                } else {
+                    adminSection.style.display = 'none';
+                }
+
+                // 2. Load API Keys
+                loadApiKeys();
+            } catch (e) {
+                console.error('Failed to load settings:', e);
+            }
+        }
+
+        async function loadApiKeys() {
+            const tableBody = document.getElementById('apiKeyTableBody');
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Loading keys...</td></tr>';
+
+            try {
+                const keys = await fetchAPI('/v1/auth/keys');
+                if (keys.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No API keys found.</td></tr>';
+                    return;
+                }
+
+                tableBody.innerHTML = keys.map(key => `
+                    <tr>
+                        <td>${key.name || 'Unnamed'}</td>
+                        <td><code>${key.client_id}</code></td>
+                        <td>${new Date(key.created_at).toLocaleDateString()}</td>
+                        <td><span style="color: ${key.is_active ? 'var(--success)' : 'var(--danger)'}">${key.is_active ? 'Active' : 'Revoked'}</span></td>
+                        <td>
+                            ${key.is_active ? `<button class="btn btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="revokeKey('${key.id}')">Revoke</button>` : '-'}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">Failed to load keys.</td></tr>';
+            }
+        }
+
+        async function generateKey() {
+            const name = document.getElementById('newKeyName').value;
+            const client_id = document.getElementById('newKeyClient').value;
+
+            if (!name || !client_id) {
+                showToast('Name and Client ID are required', 'error');
+                return;
+            }
+
+            try {
+                const data = await fetchAPI('/v1/auth/keys', {
+                    method: 'POST',
+                    body: JSON.stringify({ name, client_id })
+                });
+
+                document.getElementById('newKeyDisplay').style.display = 'block';
+                document.getElementById('newKeyValue').textContent = data.api_key;
+
+                document.getElementById('newKeyName').value = '';
+                document.getElementById('newKeyClient').value = '';
+
+                showToast('API Key generated successfully!');
+                loadApiKeys();
+            } catch (e) {
+                showToast('Failed to generate key: ' + e.message, 'error');
+            }
+        }
+
+        async function revokeKey(id) {
+            if (!confirm('Are you sure you want to revoke this API key? This cannot be undone.')) return;
+
+            try {
+                await fetchAPI('/v1/auth/keys/' + id, { method: 'DELETE' });
+                showToast('API Key revoked');
+                loadApiKeys();
+            } catch (e) {
+                showToast('Failed to revoke key', 'error');
+            }
+        }
+
+        async function loadSystemConfig() {
+            try {
+                const config = await fetchAPI('/v1/auth/config');
+                document.getElementById('sysGoogleKey').value = config.google_api_key;
+                document.getElementById('sysLogLevel').value = config.log_level;
+                document.getElementById('sysDebug').checked = config.debug;
+            } catch (e) {
+                console.error('Failed to load system config:', e);
+            }
+        }
+
+        async function saveSystemConfig() {
+            const google_api_key = document.getElementById('sysGoogleKey').value;
+            const log_level = document.getElementById('sysLogLevel').value;
+            const debug = document.getElementById('sysDebug').checked;
+
+            try {
+                await fetchAPI('/v1/auth/config', {
+                    method: 'POST',
+                    body: JSON.stringify({ google_api_key, log_level, debug })
+                });
+                showToast('System configuration saved. Restarting server...');
+            } catch (e) {
+                showToast('Failed to save configuration', 'error');
+            }
+        }
+
+        async function changePassword() {
+            const current_password = document.getElementById('changePassCurrent').value;
+            const new_password = document.getElementById('changePassNew').value;
+            const confirm_password = document.getElementById('changePassConfirm').value;
+
+            if (!current_password || !new_password) {
+                showToast('All fields are required', 'error');
+                return;
+            }
+
+            if (new_password !== confirm_password) {
+                showToast('New passwords do not match', 'error');
+                return;
+            }
+
+            try {
+                await fetchAPI('/v1/auth/password/change', {
+                    method: 'POST',
+                    body: JSON.stringify({ current_password, new_password })
+                });
+                showToast('Password updated successfully!');
+                document.getElementById('changePassCurrent').value = '';
+                document.getElementById('changePassNew').value = '';
+                document.getElementById('changePassConfirm').value = '';
+            } catch (e) {
+                showToast('Failed to update password: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteMyAccount() {
+            const confirmed = confirm('CRITICAL: This will permanently delete your account and ALL associated memories. THIS CANNOT BE UNDONE. Are you absolutely sure?');
+            if (!confirmed) return;
+
+            const typedConfirm = prompt('Please type "DELETE" to confirm account deletion:');
+            if (typedConfirm !== 'DELETE') return;
+
+            try {
+                await fetchAPI('/v1/auth/delete-account', { method: 'POST' });
+                alert('Account deleted successfully. Logging out.');
+                logout();
+            } catch (e) {
+                showToast('Failed to delete account', 'error');
+            }
+        }
+
         // Check connection
         async function checkConnection() {
             try {
@@ -1324,18 +1657,25 @@
         }
 
         // Init
+        const savedToken = localStorage.getItem('kc_token');
         const savedKey = localStorage.getItem('kc_api_key');
-        if (savedKey) {
-            document.getElementById('apiKey').value = savedKey;
+        if (savedToken || savedKey) {
+            if (savedKey) document.getElementById('apiKey').value = savedKey;
             enterWorkspace();
         }
 
         // Enter key listeners
-        document.getElementById('loginKey').addEventListener('keypress', e => {
+        document.getElementById('loginEmail').addEventListener('keypress', e => {
+            if (e.key === 'Enter') document.getElementById('loginPass').focus();
+        });
+        document.getElementById('loginPass').addEventListener('keypress', e => {
             if (e.key === 'Enter') attemptLogin();
         });
-        document.getElementById('masterKeyInput').addEventListener('keypress', e => {
-            if (e.key === 'Enter') requestNewKey();
+        document.getElementById('registerEmail').addEventListener('keypress', e => {
+            if (e.key === 'Enter') document.getElementById('registerPass').focus();
+        });
+        document.getElementById('registerPass').addEventListener('keypress', e => {
+            if (e.key === 'Enter') registerAccount();
         });
 
         // Enter key search

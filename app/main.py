@@ -16,7 +16,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
 from app.routers import ingest, memories, context, auth
-from app.dependencies import verify_api_key
+from app.dependencies import verify_api_key, require_admin
 from app.logging_config import setup_logging
 
 settings = get_settings()
@@ -65,6 +65,8 @@ async def unified_exception_handler(request: Request, exc: Exception):
 
     if isinstance(exc, StarletteHTTPException):
         status_code = exc.status_code
+        if status_code == 401:
+            logger.info(f"401 UNAUTHORIZED: path={request.url.path}, detail={exc.detail}")
         if isinstance(exc.detail, dict) and "error" in exc.detail:
             return JSONResponse(status_code=status_code, content=exc.detail)
         message = str(exc.detail)
@@ -89,10 +91,11 @@ async def unified_exception_handler(request: Request, exc: Exception):
 
 # Include routers with security dependency
 api_dependencies = [Depends(verify_api_key)] if not settings.skip_auth else []
+
+app.include_router(auth.router)  # No global dependency, endpoints handle their own
 app.include_router(ingest.router, dependencies=api_dependencies)
 app.include_router(memories.router, dependencies=api_dependencies)
 app.include_router(context.router, dependencies=api_dependencies)
-app.include_router(auth.router, dependencies=api_dependencies)
 
 
 # Memory Gardener UI

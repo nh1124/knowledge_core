@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     
     # API Authorization Settings
     kc_api_key_pepper: str = ""  # HMAC secret - REQUIRED in production
+    kc_secret_key: str = ""      # Same as secret_key, but using kc_ prefix for consistency
     kc_enable_legacy_api_key: bool = True  # Fallback to .env API_KEY with warning
     kc_require_api_key: bool = True  # Enforce key check even if legacy is disabled
     
@@ -31,6 +32,9 @@ class Settings(BaseSettings):
     
     # API Security
     api_key: str = "cortex_secret_key_2025"  # Default for dev
+    secret_key: str = "cortex_internal_secret_key_change_me_in_prod"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 1440  # 24 hours
     
     # AI Analysis Settings
     llm_model: str = "models/gemini-2.5-flash-lite"
