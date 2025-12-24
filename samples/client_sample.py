@@ -216,7 +216,14 @@ def example_with_jwt():
     profile = client.get_profile()
     print_json("User Profile", profile)
     
-    return client
+    # Check if Gemini key is configured
+    has_gemini_key = profile.get("has_gemini_key", False)
+    if not has_gemini_key:
+        print("\n⚠️  Note: No Gemini API key configured.")
+        print("   AI operations (ingest, RAG) will be skipped.")
+        print("   Configure your key at: Settings → Gemini API Key")
+    
+    return client, has_gemini_key
 
 
 def example_with_api_key(client: KnowledgeCoreClient):
@@ -241,55 +248,47 @@ def example_with_api_key(client: KnowledgeCoreClient):
     return api_key
 
 
-def example_memory_operations(client: KnowledgeCoreClient):
+def example_memory_operations(client: KnowledgeCoreClient, has_gemini_key: bool):
     """Example: Memory CRUD operations."""
     print("\n" + "="*60)
     print(" EXAMPLE: Memory Operations")
     print("="*60)
     
-    # 1. AI Ingest
-    print("\n--- AI-Powered Ingestion ---")
-    text = """
-    私は東京に住んでいる研究者です。
-    光工学とAI技術の融合について研究しています。
-    最近はGemini APIを使った記憶管理システムを開発しています。
-    昨日は論文の締め切りがあり、徹夜で作業しました。
-    """
-    job_id = client.ingest(text, source="sample_script")
-    print(f"✓ Ingestion started: {job_id}")
+    if has_gemini_key:
+        # 1. AI Ingest (requires Gemini key)
+        print("\n--- AI-Powered Ingestion ---")
+        text = """
+        私は東京に住んでいる研究者です。
+        光工学とAI技術の融合について研究しています。
+        最近はGemini APIを使った記憶管理システムを開発しています。
+        昨日は論文の締め切りがあり、徹夜で作業しました。
+        """
+        job_id = client.ingest(text, source="sample_script")
+        print(f"✓ Ingestion started: {job_id}")
+        
+        result = client.wait_for_ingest(job_id)
+        print(f"✓ Ingestion complete: {result['created_count']} memories created")
+    else:
+        print("\n--- AI-Powered Ingestion ---")
+        print("⏭  Skipped (requires Gemini API key)")
     
-    result = client.wait_for_ingest(job_id)
-    print(f"✓ Ingestion complete: {result['created_count']} memories created")
-    
-    # 2. Direct Memory Creation
-    print("\n--- Direct Memory Creation ---")
-    memory = client.create_memory(
-        content="API Key for LBS service: kc_example_key_123",
-        memory_type="fact",
-        importance=5,
-        tags=["credentials", "lbs", "secret"]
-    )
-    print(f"✓ Memory created: {memory['id']}")
-    
-    # 3. Search
-    print("\n--- Semantic Search ---")
-    results = client.search_memories(query="研究について", limit=5)
+    # 2. Search existing memories (works without AI for listing)
+    print("\n--- List Memories ---")
+    results = client.search_memories(limit=5)  # No query = no embedding needed
     print(f"✓ Found {len(results)} memories")
     for mem in results[:3]:
         print(f"  - [{mem['memory_type']}] {mem['content'][:50]}...")
-    
-    # 4. Update
-    print("\n--- Update Memory ---")
-    if results:
-        updated = client.update_memory(results[0]['id'], importance=5)
-        print(f"✓ Updated memory importance to 5")
 
 
-def example_rag_context(client: KnowledgeCoreClient):
+def example_rag_context(client: KnowledgeCoreClient, has_gemini_key: bool):
     """Example: RAG context synthesis."""
     print("\n" + "="*60)
     print(" EXAMPLE: RAG Context Synthesis")
     print("="*60)
+    
+    if not has_gemini_key:
+        print("⏭  Skipped (requires Gemini API key)")
+        return
     
     query = "ユーザーの研究分野と最近の活動について教えてください"
     print(f"Query: {query}")
@@ -319,13 +318,15 @@ def main():
     print(f"Connecting to: {BASE_URL}")
     
     # Run examples
-    client = example_with_jwt()
+    client, has_gemini_key = example_with_jwt()
     example_with_api_key(client)
-    example_memory_operations(client)
-    example_rag_context(client)
+    example_memory_operations(client, has_gemini_key)
+    example_rag_context(client, has_gemini_key)
     
     print("\n" + "="*60)
-    print(" All examples completed successfully!")
+    print(" All examples completed!")
+    if not has_gemini_key:
+        print(" Note: AI features were skipped. Configure Gemini key for full demo.")
     print("="*60)
 
 
