@@ -87,9 +87,12 @@ class KnowledgeCoreClient:
         self.api_key = api_key
         self.token = None  # Clear JWT if using API key
     
-    def create_api_key(self, name: str) -> dict:
+    def create_api_key(self, name: str, scopes: list = None) -> dict:
         """Create a new API key (requires JWT auth)."""
-        return self._request("POST", "/v1/auth/keys", json={"name": name})
+        payload = {"name": name}
+        if scopes:
+            payload["scopes"] = scopes
+        return self._request("POST", "/v1/auth/keys", json=payload)
     
     def get_profile(self) -> dict:
         """Get current user profile."""
@@ -222,8 +225,11 @@ def example_with_api_key(client: KnowledgeCoreClient):
     print(" EXAMPLE: API Key Authentication")
     print("="*60)
     
-    # Create API key (requires JWT)
-    key_data = client.create_api_key("Sample Integration")
+    # Create API key (requires JWT) with full scopes
+    key_data = client.create_api_key(
+        "Sample Integration", 
+        scopes=["ingest", "context", "memories:read", "memories:write"]
+    )
     api_key = key_data["api_key"]
     print(f"✓ Created API Key: {api_key[:15]}...")
     print("  (Save this key! It won't be shown again)")
