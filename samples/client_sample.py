@@ -336,7 +336,7 @@ def main():
     print(f"Connecting to: {BASE_URL}")
     
     # Get Gemini API key from environment (required for full demo)
-    gemini_key = "AIzaSyDdShdAJLcNb1_fd7lGsZNE0we_k3PdmqI"#os.environ.get("GEMINI_API_KEY")
+    gemini_key = os.environ.get("GEMINI_API_KEY")
     if not gemini_key:
         print("\n⚠️  GEMINI_API_KEY environment variable not set.")
         print("   Some features will be limited.")
@@ -344,7 +344,7 @@ def main():
     
     # Run examples
     client = example_with_jwt(gemini_key)
-    example_update_settings(client, gemini_key)  # Must be before API key switch (requires JWT)
+    example_update_settings(client, gemini_key)
     example_with_api_key(client)
     example_memory_operations(client)
     example_rag_context(client)

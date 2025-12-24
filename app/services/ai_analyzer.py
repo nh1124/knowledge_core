@@ -12,8 +12,7 @@ logger = get_logger("ai_analyzer")
 
 settings = get_settings()
 
-# Configure Gemini
-genai.configure(api_key=settings.google_api_key)
+# Note: genai.configure is called per-request with user's API key
 
 # System prompt for memory extraction
 EXTRACTION_PROMPT = """You are a memory extraction system. Analyze the input text and extract atomic pieces of information.
@@ -69,18 +68,12 @@ async def extract_memories(text: str, source: Optional[str] = None, api_key: Opt
     """Extract structured memories from raw text."""
     logger.debug(f"Extracting memories from text (length: {len(text)})")
     
-    # Use user-provided key or fallback to system key
-    effective_api_key = api_key or settings.google_api_key
-    if not effective_api_key:
-        logger.error("No Gemini API key available (per-user or system)")
+    # Use user-provided key (required)
+    if not api_key:
+        logger.error("Gemini API key is required")
         return []
         
-    # Configure for this call (thread-safeish for simple scripts, but better to use specific client if possible)
-    # genai.configure is global, but GenerativeModel can take a client or we can just hope for the best in this simple setup
-    # Actually, a better way with google-generativeai is to use a specific api_key for the model if possible
-    # But genai.configure is the standard way. For concurrency, we might need to be careful.
-    # However, the library is mostly stateless in terms of calls once configured.
-    genai.configure(api_key=effective_api_key)
+    genai.configure(api_key=api_key)
     
     model = genai.GenerativeModel(
         model_name=settings.llm_model,
@@ -131,12 +124,12 @@ async def synthesize_context(
     """Synthesize context from retrieved memories for RAG."""
     logger.debug(f"Synthesizing context for query with {len(memories)} memories")
     
-    effective_api_key = api_key or settings.google_api_key
-    if not effective_api_key:
-        logger.error("No Gemini API key available for context synthesis")
-        return {"summary": "Gemini API key not configured.", "bullets": []}
+    # Use user-provided key (required)
+    if not api_key:
+        logger.error("Gemini API key is required for context synthesis")
+        return {"summary": "Gemini API key not configured. Please set your key in Settings.", "bullets": []}
         
-    genai.configure(api_key=effective_api_key)
+    genai.configure(api_key=api_key)
 
     model = genai.GenerativeModel(
         model_name=settings.llm_model,

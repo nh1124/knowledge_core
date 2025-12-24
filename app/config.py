@@ -13,10 +13,7 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql+asyncpg://cortex:cortex_password@localhost:5432/cortex_db"
     
-    # Google AI (Gemini)
-    google_api_key: str = ""
-    
-    api_key: str = ""  # X-API-KEY for auth (optional for dev)
+    # Auth
     skip_auth: bool = False
     debug: bool = True
     

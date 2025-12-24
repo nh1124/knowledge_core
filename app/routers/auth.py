@@ -84,12 +84,10 @@ class PasswordChangeRequest(BaseModel):
     new_password: str
 
 class SystemConfigResponse(BaseModel):
-    google_api_key: str
     log_level: str
     debug: bool
 
 class SystemConfigRequest(BaseModel):
-    google_api_key: Optional[str] = None
     log_level: Optional[str] = None
     debug: Optional[bool] = None
 
@@ -379,10 +377,9 @@ async def change_password(
 
 @router.get("/config", response_model=SystemConfigResponse)
 async def get_system_config(identity: Identity = Depends(require_admin)):
-    """Fetch sensitive system configuration (Admin only)."""
+    """Fetch system configuration (Admin only)."""
     s = get_settings()
     return SystemConfigResponse(
-        google_api_key=s.google_api_key,
         log_level=s.log_level,
         debug=s.debug
     )
@@ -403,7 +400,6 @@ async def update_system_config(
             lines = f.readlines()
         
         updates = {}
-        if request.google_api_key is not None: updates["GOOGLE_API_KEY"] = request.google_api_key
         if request.log_level is not None: updates["LOG_LEVEL"] = request.log_level
         if request.debug is not None: updates["DEBUG"] = str(request.debug)
 

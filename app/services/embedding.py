@@ -8,8 +8,7 @@ from app.config import get_settings
 
 settings = get_settings()
 
-# Configure Gemini
-genai.configure(api_key=settings.google_api_key)
+# Note: genai.configure is called per-request with user's API key
 
 
 async def generate_embedding(text: str, api_key: Optional[str] = None) -> list[float]:
@@ -22,11 +21,10 @@ async def generate_embedding(text: str, api_key: Optional[str] = None) -> list[f
     Returns:
         768-dimensional embedding vector
     """
-    effective_api_key = api_key or settings.google_api_key
-    if not effective_api_key:
-        raise ValueError("No Gemini API key available for embedding")
+    if not api_key:
+        raise ValueError("Gemini API key is required. Please configure your key in Settings.")
         
-    genai.configure(api_key=effective_api_key)
+    genai.configure(api_key=api_key)
     
     result = genai.embed_content(
         model=settings.embedding_model,
