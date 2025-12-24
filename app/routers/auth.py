@@ -63,7 +63,7 @@ class APIKeyCreateRequest(BaseModel):
 
 class APIKeyResponse(BaseModel):
     id: uuid.UUID
-    client_id: str
+    client_id: Optional[str] = None
     name: Optional[str]
     scopes: List[str]
     is_active: bool
