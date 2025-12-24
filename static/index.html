@@ -944,9 +944,14 @@
                     <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
                         Configure your personal Gemini API key for AI ingestion and context synthesis.
                     </p>
+                    <div id="geminiKeyStatus"
+                        style="margin-bottom: 1rem; padding: 0.5rem; border-radius: 0.5rem; display: none;">
+                        <span>✅ Gemini API Key is configured</span>
+                    </div>
                     <div class="form-row" style="align-items: flex-end;">
                         <div class="form-group" style="flex: 1;">
-                            <label>Your Gemini API Key</label>
+                            <label>Your Gemini API Key <small style="color: var(--text-secondary);">(enter new key to
+                                    update)</small></label>
                             <input type="password" id="userGeminiKey" placeholder="AIza...">
                         </div>
                         <button class="btn" style="height: 2.5rem;" onclick="saveUserGeminiKey()">Save Key</button>
@@ -1505,9 +1510,14 @@
                 // 2. Load API Keys
                 loadApiKeys();
 
-                // 3. Load user's gemini key
-                if (profile.gemini_api_key) {
-                    document.getElementById('userGeminiKey').value = profile.gemini_api_key;
+                // 3. Show gemini key status (never show the actual key)
+                const geminiStatus = document.getElementById('geminiKeyStatus');
+                if (profile.has_gemini_key) {
+                    geminiStatus.style.display = 'block';
+                    geminiStatus.style.background = 'rgba(16, 185, 129, 0.1)';
+                    geminiStatus.style.border = '1px solid var(--success)';
+                } else {
+                    geminiStatus.style.display = 'none';
                 }
             } catch (e) {
                 console.error('Failed to load settings:', e);

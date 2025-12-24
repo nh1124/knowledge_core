@@ -17,7 +17,8 @@ from app.auth import (
     require_local_user,
     require_client_api_key,
     require_external_identity,
-    require_user_identity
+    require_user_identity,
+    encrypt_secret
 )
 from app.dependencies import require_admin
 from app.logging_config import get_logger
@@ -50,7 +51,7 @@ class UserResponse(BaseModel):
     is_admin: bool
     is_active: bool
     auth_method: Optional[str] = None
-    gemini_api_key: Optional[str] = None
+    has_gemini_key: bool = False  # Indicates if user has configured a key, but never expose value
 
 # --- API Key Models ---
 
@@ -259,7 +260,7 @@ async def get_my_profile(
         is_admin=row[3],
         is_active=row[4],
         auth_method=identity.auth_method,
-        gemini_api_key=row[5] if len(row) > 5 else None
+        has_gemini_key=bool(row[5]) if len(row) > 5 else False
     )
 
 @router.get("/keys/me", response_model=APIKeyResponse)
@@ -456,9 +457,11 @@ async def update_user_settings(
 ):
     """Update per-user settings (Gemini API key)."""
     if request.gemini_api_key is not None:
+        # Encrypt the key before storing
+        encrypted_key = encrypt_secret(request.gemini_api_key) if request.gemini_api_key else ""
         await db.execute(
             text("UPDATE users SET gemini_api_key = :key WHERE user_id = :id"),
-            {"key": request.gemini_api_key, "id": identity.user_id}
+            {"key": encrypted_key, "id": identity.user_id}
         )
         await db.commit()
     return {"status": "success", "message": "Settings updated"}

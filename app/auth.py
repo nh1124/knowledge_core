@@ -50,6 +50,37 @@ def hash_api_key(api_key: str) -> str:
         hashlib.sha256
     ).hexdigest()
 
+
+def _get_encryption_key() -> bytes:
+    """Derive a Fernet-compatible key from server secret."""
+    import base64
+    secret = (settings.kc_secret_key or settings.secret_key).encode()
+    # Use first 32 bytes of SHA256 hash, then base64 encode for Fernet
+    key_bytes = hashlib.sha256(secret).digest()
+    return base64.urlsafe_b64encode(key_bytes)
+
+
+def encrypt_secret(plaintext: str) -> str:
+    """Encrypt a secret string for storage."""
+    from cryptography.fernet import Fernet
+    if not plaintext:
+        return ""
+    f = Fernet(_get_encryption_key())
+    return f.encrypt(plaintext.encode()).decode()
+
+
+def decrypt_secret(ciphertext: str) -> str:
+    """Decrypt a stored secret string."""
+    from cryptography.fernet import Fernet
+    if not ciphertext:
+        return ""
+    try:
+        f = Fernet(_get_encryption_key())
+        return f.decrypt(ciphertext.encode()).decode()
+    except Exception as e:
+        logger.warning(f"Failed to decrypt secret: {e}")
+        return ""
+
 async def get_identity_from_jwt(token: str) -> dict:
     try:
         secret = settings.kc_secret_key or settings.secret_key
@@ -90,6 +121,8 @@ async def resolve_identity(
                  {"id": user_id_str}
              )
              user_row = result.fetchone()
+             # Decrypt the stored key
+             decrypted_key = decrypt_secret(user_row[0]) if user_row and user_row[0] else None
              return Identity(
                 user_id=uuid.UUID(user_id_str),
                 auth_method="local",
@@ -98,7 +131,7 @@ async def resolve_identity(
                 scopes=payload.get("scopes", []),
                 is_admin=payload.get("is_admin", False),
                 warnings=warnings,
-                gemini_api_key=user_row[0] if user_row else None
+                gemini_api_key=decrypted_key
             )
         
         # Scenario B: External JWT
@@ -113,6 +146,7 @@ async def resolve_identity(
         )
         row = result.fetchone()
         if row:
+            decrypted_key = decrypt_secret(row[1]) if row[1] else None
             return Identity(
                 user_id=row[0],
                 auth_method="external",
@@ -120,7 +154,7 @@ async def resolve_identity(
                 audience=payload.get("aud"),
                 scopes=payload.get("scopes", []),
                 warnings=warnings,
-                gemini_api_key=row[1]
+                gemini_api_key=decrypted_key
             )
 
         return Identity(
@@ -148,7 +182,8 @@ async def resolve_identity(
         row = result.fetchone()
         
         if row:
-            user_id, client_id, scopes, is_active, is_admin, gemini_api_key = row
+            user_id, client_id, scopes, is_active, is_admin, encrypted_gemini_key = row
+            decrypted_gemini_key = decrypt_secret(encrypted_gemini_key) if encrypted_gemini_key else None
             
             # Update last_used_at
             await db.execute(
@@ -163,7 +198,7 @@ async def resolve_identity(
                 auth_method="api_key",
                 is_admin=is_admin,
                 warnings=warnings,
-                gemini_api_key=gemini_api_key
+                gemini_api_key=decrypted_gemini_key
             )
         
         # Legacy Fallback (if enabled)
