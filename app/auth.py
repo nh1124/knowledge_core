@@ -33,6 +33,7 @@ class Identity(BaseModel):
     audience: Optional[str] = None
     warnings: List[str] = []
     is_admin: bool = False
+    gemini_api_key: Optional[str] = None
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
@@ -82,7 +83,13 @@ async def resolve_identity(
             raise HTTPException(status_code=401, detail="Invalid token: missing sub")
         
         issuer = payload.get("iss")
-        if issuer == "kc": # Standard KnowledgeCore issuer
+        # Scenario A: Local JWT - fetch gemini_api_key
+        if issuer == "kc":
+             result = await db.execute(
+                 text("SELECT gemini_api_key FROM users WHERE user_id = :id"),
+                 {"id": user_id_str}
+             )
+             user_row = result.fetchone()
              return Identity(
                 user_id=uuid.UUID(user_id_str),
                 auth_method="local",
@@ -90,12 +97,18 @@ async def resolve_identity(
                 audience=payload.get("aud"),
                 scopes=payload.get("scopes", []),
                 is_admin=payload.get("is_admin", False),
-                warnings=warnings
+                warnings=warnings,
+                gemini_api_key=user_row[0] if user_row else None
             )
         
         # Scenario B: External JWT
         result = await db.execute(
-            text("SELECT user_id FROM external_identities WHERE issuer = :i AND subject = :s"),
+            text("""
+                SELECT ei.user_id, u.gemini_api_key 
+                FROM external_identities ei
+                JOIN users u ON ei.user_id = u.user_id
+                WHERE ei.issuer = :i AND ei.subject = :s
+            """),
             {"i": issuer, "s": user_id_str}
         )
         row = result.fetchone()
@@ -106,7 +119,8 @@ async def resolve_identity(
                 issuer=issuer,
                 audience=payload.get("aud"),
                 scopes=payload.get("scopes", []),
-                warnings=warnings
+                warnings=warnings,
+                gemini_api_key=row[1]
             )
 
         return Identity(
@@ -124,16 +138,17 @@ async def resolve_identity(
         # Check DB for API Key
         result = await db.execute(
             text("""
-                SELECT user_id, client_id, scopes, is_active, is_admin
-                FROM api_keys
-                WHERE key_hash = :h AND is_active = TRUE
+                SELECT a.user_id, a.client_id, a.scopes, a.is_active, a.is_admin, u.gemini_api_key
+                FROM api_keys a
+                JOIN users u ON a.user_id = u.user_id
+                WHERE a.key_hash = :h AND a.is_active = TRUE
             """),
             {"h": key_hash}
         )
         row = result.fetchone()
         
         if row:
-            user_id, client_id, scopes, is_active, is_admin = row
+            user_id, client_id, scopes, is_active, is_admin, gemini_api_key = row
             
             # Update last_used_at
             await db.execute(
@@ -147,7 +162,8 @@ async def resolve_identity(
                 scopes=scopes or [],
                 auth_method="api_key",
                 is_admin=is_admin,
-                warnings=warnings
+                warnings=warnings,
+                gemini_api_key=gemini_api_key
             )
         
         # Legacy Fallback (if enabled)

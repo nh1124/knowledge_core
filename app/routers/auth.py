@@ -50,12 +50,13 @@ class UserResponse(BaseModel):
     is_admin: bool
     is_active: bool
     auth_method: Optional[str] = None
+    gemini_api_key: Optional[str] = None
 
 # --- API Key Models ---
 
 class APIKeyCreateRequest(BaseModel):
     name: str = Field(..., example="My App Key")
-    client_id: str = Field(..., example="my_mobile_app")
+    client_id: Optional[str] = Field(None, example="my_mobile_app")
     scopes: List[str] = Field(default=["memories:read", "context"], example=["memories:read", "context"])
     is_admin: bool = False
 
@@ -89,6 +90,9 @@ class SystemConfigRequest(BaseModel):
     google_api_key: Optional[str] = None
     log_level: Optional[str] = None
     debug: Optional[bool] = None
+
+class UserSettingsRequest(BaseModel):
+    gemini_api_key: Optional[str] = None
 
 # --- Endpoints ---
 
@@ -241,7 +245,7 @@ async def get_my_profile(
 ):
     """Return current user profile (requires local Bearer token)."""
     result = await db.execute(
-        text("SELECT user_id, email, name, is_admin, is_active FROM users WHERE user_id = :id"),
+        text("SELECT user_id, email, name, is_admin, is_active, gemini_api_key FROM users WHERE user_id = :id"),
         {"id": identity.user_id}
     )
     row = result.fetchone()
@@ -254,7 +258,8 @@ async def get_my_profile(
         name=row[2],
         is_admin=row[3],
         is_active=row[4],
-        auth_method=identity.auth_method
+        auth_method=identity.auth_method,
+        gemini_api_key=row[5] if len(row) > 5 else None
     )
 
 @router.get("/keys/me", response_model=APIKeyResponse)
@@ -442,3 +447,18 @@ async def delete_my_account(
     
     logger.info(f"Account and all data deleted for user: {identity.user_id}")
     return {"status": "deleted", "user_id": identity.user_id}
+
+@router.patch("/settings")
+async def update_user_settings(
+    request: UserSettingsRequest,
+    db: AsyncSession = Depends(get_db),
+    identity: Identity = Depends(require_local_user)
+):
+    """Update per-user settings (Gemini API key)."""
+    if request.gemini_api_key is not None:
+        await db.execute(
+            text("UPDATE users SET gemini_api_key = :key WHERE user_id = :id"),
+            {"key": request.gemini_api_key, "id": identity.user_id}
+        )
+        await db.commit()
+    return {"status": "success", "message": "Settings updated"}

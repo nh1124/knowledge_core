@@ -738,14 +738,6 @@
     <div class="container">
         <aside class="sidebar">
             <nav class="nav-section">
-                <h3>Configuration</h3>
-                <div class="form-group" style="padding: 0 1rem;">
-                    <label style="font-size: 0.7rem;">API Key</label>
-                    <input type="password" id="apiKey" value=""
-                        style="padding: 0.4rem; font-size: 0.8rem; background: var(--bg-primary);">
-                </div>
-            </nav>
-            <nav class="nav-section">
                 <h3>Navigation</h3>
                 <button class="nav-btn active" data-panel="search">🔍 Search Memories</button>
                 <button class="nav-btn" data-panel="ingest">📝 AI Ingest</button>
@@ -920,10 +912,6 @@
                             <label>Key Name</label>
                             <input type="text" id="newKeyName" placeholder="My Mobile App">
                         </div>
-                        <div class="form-group">
-                            <label>Client ID</label>
-                            <input type="text" id="newKeyClient" placeholder="mobile_app_1">
-                        </div>
                         <button class="btn" style="height: 2.5rem;" onclick="generateKey()">Generate Key</button>
                     </div>
 
@@ -939,7 +927,6 @@
                         <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>Client ID</th>
                                 <th>Created</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -949,6 +936,21 @@
                             <!-- Keys loaded here -->
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Per-User Gemini API Key -->
+                <div class="settings-section">
+                    <h3>🔮 Gemini API Key</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+                        Configure your personal Gemini API key for AI ingestion and context synthesis.
+                    </p>
+                    <div class="form-row" style="align-items: flex-end;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Your Gemini API Key</label>
+                            <input type="password" id="userGeminiKey" placeholder="AIza...">
+                        </div>
+                        <button class="btn" style="height: 2.5rem;" onclick="saveUserGeminiKey()">Save Key</button>
+                    </div>
                 </div>
 
                 <!-- External Service Configuration (Admin Only) -->
@@ -1090,7 +1092,7 @@
         // API Calls
         async function fetchAPI(endpoint, options = {}) {
             const token = localStorage.getItem('kc_token');
-            const apiKey = document.getElementById('apiKey').value || localStorage.getItem('kc_api_key');
+            const apiKey = localStorage.getItem('kc_api_key');
 
             const headers = {
                 'Content-Type': 'application/json'
@@ -1502,6 +1504,11 @@
 
                 // 2. Load API Keys
                 loadApiKeys();
+
+                // 3. Load user's gemini key
+                if (profile.gemini_api_key) {
+                    document.getElementById('userGeminiKey').value = profile.gemini_api_key;
+                }
             } catch (e) {
                 console.error('Failed to load settings:', e);
             }
@@ -1521,7 +1528,6 @@
                 tableBody.innerHTML = keys.map(key => `
                     <tr>
                         <td>${key.name || 'Unnamed'}</td>
-                        <td><code>${key.client_id}</code></td>
                         <td>${new Date(key.created_at).toLocaleDateString()}</td>
                         <td><span style="color: ${key.is_active ? 'var(--success)' : 'var(--danger)'}">${key.is_active ? 'Active' : 'Revoked'}</span></td>
                         <td>
@@ -1536,29 +1542,40 @@
 
         async function generateKey() {
             const name = document.getElementById('newKeyName').value;
-            const client_id = document.getElementById('newKeyClient').value;
 
-            if (!name || !client_id) {
-                showToast('Name and Client ID are required', 'error');
+            if (!name) {
+                showToast('Key name is required', 'error');
                 return;
             }
 
             try {
                 const data = await fetchAPI('/v1/auth/keys', {
                     method: 'POST',
-                    body: JSON.stringify({ name, client_id })
+                    body: JSON.stringify({ name })
                 });
 
                 document.getElementById('newKeyDisplay').style.display = 'block';
                 document.getElementById('newKeyValue').textContent = data.api_key;
 
                 document.getElementById('newKeyName').value = '';
-                document.getElementById('newKeyClient').value = '';
 
                 showToast('API Key generated successfully!');
                 loadApiKeys();
             } catch (e) {
                 showToast('Failed to generate key: ' + e.message, 'error');
+            }
+        }
+
+        async function saveUserGeminiKey() {
+            const gemini_api_key = document.getElementById('userGeminiKey').value;
+            try {
+                await fetchAPI('/v1/auth/settings', {
+                    method: 'PATCH',
+                    body: JSON.stringify({ gemini_api_key })
+                });
+                showToast('Gemini API Key saved!');
+            } catch (e) {
+                showToast('Failed to save Gemini key: ' + e.message, 'error');
             }
         }
 
@@ -1658,9 +1675,7 @@
 
         // Init
         const savedToken = localStorage.getItem('kc_token');
-        const savedKey = localStorage.getItem('kc_api_key');
-        if (savedToken || savedKey) {
-            if (savedKey) document.getElementById('apiKey').value = savedKey;
+        if (savedToken) {
             enterWorkspace();
         }
 

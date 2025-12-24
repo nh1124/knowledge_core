@@ -55,6 +55,7 @@ class MemoryManager:
         event_time: Optional[datetime] = None,
         related_entities: Optional[dict] = None,
         skip_dedup: bool = False,
+        api_key: Optional[str] = None,
     ) -> dict:
         """Create a new memory with deduplication check.
         
@@ -77,7 +78,7 @@ class MemoryManager:
             }
         
         # Generate embedding
-        embedding = await generate_embedding(content)
+        embedding = await generate_embedding(content, api_key=api_key)
         
         # Check for similar memory (vector search)
         if not skip_dedup:
@@ -300,6 +301,7 @@ class MemoryManager:
         agent_id: Optional[str] = None,
         include_global: bool = True,
         limit: int = 50,
+        api_key: Optional[str] = None,
     ) -> list[dict]:
         """Search memories with optional vector similarity."""
         # Set RLS context
@@ -334,7 +336,7 @@ class MemoryManager:
         
         # Vector similarity search if query provided
         if query:
-            embedding = await generate_embedding(query)
+            embedding = await generate_embedding(query, api_key=api_key)
             params["embedding"] = _format_embedding(embedding)
             select_cols += ", 1 - (embedding <=> CAST(:embedding AS vector)) as similarity"
             order_by = "embedding <=> CAST(:embedding AS vector)"
@@ -453,6 +455,7 @@ class MemoryManager:
         tags: Optional[list[str]] = None,
         importance: Optional[int] = None,
         confidence: Optional[float] = None,
+        api_key: Optional[str] = None,
     ) -> Optional[dict]:
         """Update a memory's metadata."""
         # Set RLS context
@@ -474,7 +477,7 @@ class MemoryManager:
             params["content_hash"] = compute_content_hash(content)
             updates.append("content_hash = :content_hash")
             # Regenerate embedding
-            embedding = await generate_embedding(content)
+            embedding = await generate_embedding(content, api_key=api_key)
             updates.append("embedding = CAST(:embedding AS vector)")
             params["embedding"] = _format_embedding(embedding)
             diff_before["content"] = current["content"]

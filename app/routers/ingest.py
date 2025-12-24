@@ -15,7 +15,7 @@ logger = get_logger("ingest")
 router = APIRouter(prefix="/v1", tags=["Ingest"])
 
 
-async def background_ingest(job_id: str, request: IngestRequest):
+async def background_ingest(job_id: str, request: IngestRequest, api_key: Optional[str] = None):
     """Process extraction in the background."""
     logger.info(f"Starting background ingest job: {job_id}")
     JobManager.update_job(job_id, status="processing")
@@ -27,7 +27,7 @@ async def background_ingest(job_id: str, request: IngestRequest):
             user_id = request.user_id or uuid.UUID("00000000-0000-0000-0000-000000000001")
             
             # Extract memories from text using AI
-            extracted = await extract_memories(request.text, source=request.source)
+            extracted = await extract_memories(request.text, source=request.source, api_key=api_key)
             
             if not extracted:
                 logger.warning(f"No memories extracted for job {job_id}")
@@ -58,6 +58,7 @@ async def background_ingest(job_id: str, request: IngestRequest):
                         input_channel="chat" if request.source == "chat" else "api",
                         event_time=request.event_time,
                         skip_dedup=request.skip_dedup,
+                        api_key=api_key,
                     )
                     
                     if result["action"] == "created":
@@ -112,7 +113,7 @@ async def ingest_text(
     request.agent_id = agent_id
 
     job_id = JobManager.create_job()
-    background_tasks.add_task(background_ingest, job_id, request)
+    background_tasks.add_task(background_ingest, job_id, request, api_key=_identity.gemini_api_key)
     
     warnings = ["Processing started in background"]
     warnings.extend(request_warnings.get())

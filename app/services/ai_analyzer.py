@@ -65,9 +65,23 @@ Output as JSON:
 """
 
 
-async def extract_memories(text: str, source: Optional[str] = None) -> list[dict]:
+async def extract_memories(text: str, source: Optional[str] = None, api_key: Optional[str] = None) -> list[dict]:
     """Extract structured memories from raw text."""
     logger.debug(f"Extracting memories from text (length: {len(text)})")
+    
+    # Use user-provided key or fallback to system key
+    effective_api_key = api_key or settings.google_api_key
+    if not effective_api_key:
+        logger.error("No Gemini API key available (per-user or system)")
+        return []
+        
+    # Configure for this call (thread-safeish for simple scripts, but better to use specific client if possible)
+    # genai.configure is global, but GenerativeModel can take a client or we can just hope for the best in this simple setup
+    # Actually, a better way with google-generativeai is to use a specific api_key for the model if possible
+    # But genai.configure is the standard way. For concurrency, we might need to be careful.
+    # However, the library is mostly stateless in terms of calls once configured.
+    genai.configure(api_key=effective_api_key)
+    
     model = genai.GenerativeModel(
         model_name=settings.llm_model,
         system_instruction=EXTRACTION_PROMPT
@@ -112,9 +126,18 @@ async def synthesize_context(
     query: str,
     memories: list[dict],
     app_context: Optional[dict] = None,
+    api_key: Optional[str] = None,
 ) -> dict:
     """Synthesize context from retrieved memories for RAG."""
     logger.debug(f"Synthesizing context for query with {len(memories)} memories")
+    
+    effective_api_key = api_key or settings.google_api_key
+    if not effective_api_key:
+        logger.error("No Gemini API key available for context synthesis")
+        return {"summary": "Gemini API key not configured.", "bullets": []}
+        
+    genai.configure(api_key=effective_api_key)
+
     model = genai.GenerativeModel(
         model_name=settings.llm_model,
         system_instruction=SYNTHESIS_PROMPT

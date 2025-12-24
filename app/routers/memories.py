@@ -48,6 +48,7 @@ async def create_memory(
         source=request.source or "manual",
         input_channel="manual",
         skip_dedup=request.skip_dedup,
+        api_key=_identity.gemini_api_key,
     )
     
     # Fetch the created memory
@@ -93,6 +94,7 @@ async def list_memories(
         scope=scope,
         agent_id=agent_id,
         limit=limit,
+        api_key=_identity.gemini_api_key,
     )
     
     return MemoryListResponse(
@@ -149,6 +151,7 @@ async def update_memory(
         tags=request.tags,
         importance=request.importance,
         confidence=request.confidence,
+        api_key=_identity.gemini_api_key,
     )
     
     if not updated:
