@@ -65,11 +65,12 @@ class KnowledgeCoreClient:
     
     # --- Authentication ---
     
-    def register(self, email: str, password: str, name: str = None) -> dict:
-        """Register a new user account."""
+    def register(self, email: str, password: str, gemini_api_key: str, name: str = None) -> dict:
+        """Register a new user account (requires Gemini API key)."""
         return self._request("POST", "/v1/auth/register", json={
             "email": email,
             "password": password,
+            "gemini_api_key": gemini_api_key,
             "name": name or "API User"
         })
     
@@ -97,6 +98,13 @@ class KnowledgeCoreClient:
     def get_profile(self) -> dict:
         """Get current user profile."""
         return self._request("GET", "/v1/auth/me")
+    
+    def update_settings(self, gemini_api_key: str = None) -> dict:
+        """Update user settings (e.g., Gemini API key)."""
+        payload = {}
+        if gemini_api_key is not None:
+            payload["gemini_api_key"] = gemini_api_key
+        return self._request("PATCH", "/v1/auth/settings", json=payload)
     
     # --- Memory Operations ---
     
@@ -190,7 +198,7 @@ def print_json(title: str, data):
     print(json.dumps(data, indent=2, ensure_ascii=False))
 
 
-def example_with_jwt():
+def example_with_jwt(gemini_key: str = None):
     """Example: Using JWT authentication (for user sessions)."""
     print("\n" + "="*60)
     print(" EXAMPLE: JWT Authentication")
@@ -199,12 +207,21 @@ def example_with_jwt():
     client = KnowledgeCoreClient()
     
     # Register a new user (skip if already exists)
+    # Note: Registration now requires a Gemini API key
     try:
-        client.register("sample@example.com", "password123", "Sample User")
-        print("✓ User registered")
+        if not gemini_key:
+            print("⚠️  Gemini API key required for registration.")
+            print("   Set GEMINI_API_KEY environment variable or pass it to this function.")
+            print("   Attempting login with existing user...")
+        else:
+            client.register("sample@example.com", "password123", 
+                          gemini_api_key=gemini_key, name="Sample User")
+            print("✓ User registered with Gemini key")
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 400:
             print("✓ User already exists")
+        elif e.response.status_code == 422:
+            print("⚠️  Registration failed - Gemini API key is required")
         else:
             raise
     
@@ -216,14 +233,7 @@ def example_with_jwt():
     profile = client.get_profile()
     print_json("User Profile", profile)
     
-    # Check if Gemini key is configured
-    has_gemini_key = profile.get("has_gemini_key", False)
-    if not has_gemini_key:
-        print("\n⚠️  Note: No Gemini API key configured.")
-        print("   AI operations (ingest, RAG) will be skipped.")
-        print("   Configure your key at: Settings → Gemini API Key")
-    
-    return client, has_gemini_key
+    return client
 
 
 def example_with_api_key(client: KnowledgeCoreClient):
@@ -248,47 +258,53 @@ def example_with_api_key(client: KnowledgeCoreClient):
     return api_key
 
 
-def example_memory_operations(client: KnowledgeCoreClient, has_gemini_key: bool):
+def example_update_settings(client: KnowledgeCoreClient, gemini_key: str = None):
+    """Example: Updating user settings via API."""
+    print("\n" + "="*60)
+    print(" EXAMPLE: Update Settings via API")
+    print("="*60)
+    
+    if gemini_key:
+        result = client.update_settings(gemini_api_key=gemini_key)
+        print(f"✓ Updated Gemini API key via PATCH /v1/auth/settings")
+        print(f"  Response: {result}")
+    else:
+        print("⏭  Skipped (provide gemini_key to demo settings update)")
+
+
+def example_memory_operations(client: KnowledgeCoreClient):
     """Example: Memory CRUD operations."""
     print("\n" + "="*60)
     print(" EXAMPLE: Memory Operations")
     print("="*60)
     
-    if has_gemini_key:
-        # 1. AI Ingest (requires Gemini key)
-        print("\n--- AI-Powered Ingestion ---")
-        text = """
-        私は東京に住んでいる研究者です。
-        光工学とAI技術の融合について研究しています。
-        最近はGemini APIを使った記憶管理システムを開発しています。
-        昨日は論文の締め切りがあり、徹夜で作業しました。
-        """
-        job_id = client.ingest(text, source="sample_script")
-        print(f"✓ Ingestion started: {job_id}")
-        
-        result = client.wait_for_ingest(job_id)
-        print(f"✓ Ingestion complete: {result['created_count']} memories created")
-    else:
-        print("\n--- AI-Powered Ingestion ---")
-        print("⏭  Skipped (requires Gemini API key)")
+    # 1. AI Ingest
+    print("\n--- AI-Powered Ingestion ---")
+    text = """
+    私は東京に住んでいる研究者です。
+    光工学とAI技術の融合について研究しています。
+    最近はGemini APIを使った記憶管理システムを開発しています。
+    昨日は論文の締め切りがあり、徹夜で作業しました。
+    """
+    job_id = client.ingest(text, source="sample_script")
+    print(f"✓ Ingestion started: {job_id}")
     
-    # 2. Search existing memories (works without AI for listing)
+    result = client.wait_for_ingest(job_id)
+    print(f"✓ Ingestion complete: {result['created_count']} memories created")
+    
+    # 2. Search memories
     print("\n--- List Memories ---")
-    results = client.search_memories(limit=5)  # No query = no embedding needed
+    results = client.search_memories(limit=5)
     print(f"✓ Found {len(results)} memories")
     for mem in results[:3]:
         print(f"  - [{mem['memory_type']}] {mem['content'][:50]}...")
 
 
-def example_rag_context(client: KnowledgeCoreClient, has_gemini_key: bool):
+def example_rag_context(client: KnowledgeCoreClient):
     """Example: RAG context synthesis."""
     print("\n" + "="*60)
     print(" EXAMPLE: RAG Context Synthesis")
     print("="*60)
-    
-    if not has_gemini_key:
-        print("⏭  Skipped (requires Gemini API key)")
-        return
     
     query = "ユーザーの研究分野と最近の活動について教えてください"
     print(f"Query: {query}")
@@ -312,21 +328,29 @@ def example_rag_context(client: KnowledgeCoreClient, has_gemini_key: bool):
 # Main
 # ============================================================================
 def main():
+    import os
+    
     print("="*60)
     print(" Knowledge Core - Client Sample")
     print("="*60)
     print(f"Connecting to: {BASE_URL}")
     
+    # Get Gemini API key from environment (required for full demo)
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if not gemini_key:
+        print("\n⚠️  GEMINI_API_KEY environment variable not set.")
+        print("   Some features will be limited.")
+        print("   Set it with: set GEMINI_API_KEY=your_key_here")
+    
     # Run examples
-    client, has_gemini_key = example_with_jwt()
+    client = example_with_jwt(gemini_key)
     example_with_api_key(client)
-    example_memory_operations(client, has_gemini_key)
-    example_rag_context(client, has_gemini_key)
+    example_update_settings(client, gemini_key)  # Show settings API
+    example_memory_operations(client)
+    example_rag_context(client)
     
     print("\n" + "="*60)
     print(" All examples completed!")
-    if not has_gemini_key:
-        print(" Note: AI features were skipped. Configure Gemini key for full demo.")
     print("="*60)
 
 
