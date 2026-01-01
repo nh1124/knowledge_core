@@ -334,8 +334,8 @@ class MemoryManager:
         order_by = "created_at DESC"
         select_cols = "id, user_id, content, memory_type, tags, scope, agent_id, importance, confidence, source, event_time, created_at, updated_at"
         
+        # Vector similarity search if query provided
         if query:
-            conditions.append("embedding IS NOT NULL")
             embedding = await generate_embedding(query, api_key=api_key)
             params["embedding"] = _format_embedding(embedding)
             select_cols += ", 1 - (embedding <=> CAST(:embedding AS vector)) as similarity"
