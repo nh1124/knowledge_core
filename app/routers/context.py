@@ -32,6 +32,9 @@ async def get_context(
     scope, agent_id = scope_data
     manager = MemoryManager(db)
     
+    # AI Analysis Settings
+    llm_model: str = "models/gemini-2.5-flash-lite"
+    
     # Get user's Gemini API key
     api_key = identity.gemini_api_key
     
@@ -70,8 +73,8 @@ async def get_context(
         evidence = [
             ContextEvidenceItem(
                 memory_id=m["id"],
-                similarity=m.get("similarity", 0.0),
-                final_score=m.get("score", 0.0),
+                similarity=m.get("similarity") or 0.0,
+                final_score=m.get("score") or 0.0,
                 content=m["content"],
                 score_components=ScoreComponents(
                     importance=m.get("score_components", {}).get("importance", 0.0),

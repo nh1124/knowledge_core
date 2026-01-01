@@ -163,7 +163,8 @@ Relevant Memories:
     
     try:
         return json.loads(response.text)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.error(f"Error synthesizing or parsing context: {e}")
         return {
             "summary": "Unable to synthesize context.",
             "bullets": [],
