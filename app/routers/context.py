@@ -32,9 +32,6 @@ async def get_context(
     scope, agent_id = scope_data
     manager = MemoryManager(db)
     
-    # AI Analysis Settings
-    llm_model: str = "models/gemini-2.5-flash-lite"
-    
     # Get user's Gemini API key
     api_key = identity.gemini_api_key
     
