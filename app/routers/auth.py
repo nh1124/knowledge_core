@@ -274,9 +274,9 @@ async def get_my_key_info(
         text("""
             SELECT id, client_id, name, scopes, is_active, is_admin, created_at, last_used_at
             FROM api_keys
-            WHERE user_id = :uid AND client_id = :cid AND is_active = TRUE
+            WHERE id = :kid AND is_active = TRUE
         """),
-        {"uid": identity.user_id, "cid": identity.client_id}
+        {"kid": identity.key_id}
     )
     row = result.fetchone()
     if not row:

@@ -67,6 +67,7 @@ class MemoryResponse(BaseModel):
     agent_id: Optional[str] = None
     importance: int
     confidence: float
+    input_channel: Optional[str] = None
     source: Optional[str] = None
     event_time: Optional[str] = None
     created_at: Optional[str] = None

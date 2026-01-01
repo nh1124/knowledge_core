@@ -237,10 +237,10 @@ class MemoryManager:
             text("""
                 INSERT INTO memories (
                     id, user_id, content, embedding, memory_type, tags, scope, agent_id,
-                    importance, confidence, content_hash, supersedes_id
+                    importance, confidence, source, input_channel, content_hash, supersedes_id
                 )
                 SELECT :new_id, user_id, :content, CAST(:embedding AS vector), memory_type, 
-                       :tags, scope, agent_id, :importance, :confidence, :content_hash, :supersedes_id
+                       :tags, scope, agent_id, :importance, :confidence, source, input_channel, :content_hash, :supersedes_id
                 FROM memories WHERE id = :old_id
                 RETURNING id
             """),
@@ -332,7 +332,7 @@ class MemoryManager:
         
         # Build query
         order_by = "created_at DESC"
-        select_cols = "id, user_id, content, memory_type, tags, scope, agent_id, importance, confidence, source, event_time, created_at, updated_at"
+        select_cols = "id, user_id, content, memory_type, tags, scope, agent_id, importance, confidence, source, input_channel, event_time, created_at, updated_at"
         
         # Vector similarity search if query provided
         if query:
@@ -368,13 +368,14 @@ class MemoryManager:
                 "importance": row[7],
                 "confidence": row[8],
                 "source": row[9],
-                "event_time": row[10].isoformat() if row[10] else None,
-                "created_at": row[11].isoformat() if row[11] else None,
-                "updated_at": row[12].isoformat() if row[12] else None,
+                "input_channel": row[10],
+                "event_time": row[11].isoformat() if row[11] else None,
+                "created_at": row[12].isoformat() if row[12] else None,
+                "updated_at": row[13].isoformat() if row[13] else None,
             }
             
             # Base score from similarity or default
-            similarity = row[13] if (query and len(row) > 13 and row[13] is not None) else 0.5
+            similarity = row[14] if (query and len(row) > 14 and row[14] is not None) else 0.5
             mem["similarity"] = similarity
             
             # Ranking Factors
@@ -423,7 +424,7 @@ class MemoryManager:
         result = await self.session.execute(
             text("""
                 SELECT id, user_id, content, memory_type, tags, scope, agent_id,
-                       importance, confidence, source, event_time, created_at, updated_at
+                       importance, confidence, source, input_channel, event_time, created_at, updated_at
                 FROM memories WHERE id = :id
             """),
             {"id": memory_id}
@@ -441,9 +442,10 @@ class MemoryManager:
                 "importance": row[7],
                 "confidence": row[8],
                 "source": row[9],
-                "event_time": row[10].isoformat() if row[10] else None,
-                "created_at": row[11].isoformat() if row[11] else None,
-                "updated_at": row[12].isoformat() if row[12] else None,
+                "input_channel": row[10],
+                "event_time": row[11].isoformat() if row[11] else None,
+                "created_at": row[12].isoformat() if row[12] else None,
+                "updated_at": row[13].isoformat() if row[13] else None,
             }
         return None
     
@@ -541,10 +543,12 @@ class MemoryManager:
             )
         
         row = result.fetchone()
-        if row:
+        if row and not hard_delete:
             await self._create_audit_log(
                 memory_id, AuditAction.DELETE,
                 actor_type=ActorType.USER
             )
+            return True
+        elif row:
             return True
         return False

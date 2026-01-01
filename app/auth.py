@@ -26,6 +26,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/auth/login", auto_error=False
 
 class Identity(BaseModel):
     user_id: uuid.UUID
+    key_id: Optional[uuid.UUID] = None
     client_id: Optional[str] = None
     scopes: List[str] = []
     auth_method: str # local, api_key, external, dev_fallback
@@ -172,7 +173,7 @@ async def resolve_identity(
         # Check DB for API Key
         result = await db.execute(
             text("""
-                SELECT a.user_id, a.client_id, a.scopes, a.is_active, a.is_admin, u.gemini_api_key
+                SELECT a.id, a.user_id, a.client_id, a.scopes, a.is_active, a.is_admin, u.gemini_api_key
                 FROM api_keys a
                 JOIN users u ON a.user_id = u.user_id
                 WHERE a.key_hash = :h AND a.is_active = TRUE
@@ -182,7 +183,7 @@ async def resolve_identity(
         row = result.fetchone()
         
         if row:
-            user_id, client_id, scopes, is_active, is_admin, encrypted_gemini_key = row
+            key_id, user_id, client_id, scopes, is_active, is_admin, encrypted_gemini_key = row
             decrypted_gemini_key = decrypt_secret(encrypted_gemini_key) if encrypted_gemini_key else None
             
             # Update last_used_at
@@ -193,6 +194,7 @@ async def resolve_identity(
             
             return Identity(
                 user_id=user_id,
+                key_id=key_id,
                 client_id=client_id,
                 scopes=scopes or [],
                 auth_method="api_key",
