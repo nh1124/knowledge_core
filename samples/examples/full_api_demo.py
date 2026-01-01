@@ -20,7 +20,7 @@ def main():
     BASE_URL = os.environ.get("KC_BASE_URL", "http://localhost:8200")
     EMAIL = os.environ.get("KC_EMAIL", "demo@example.com")
     PASSWORD = os.environ.get("KC_PASSWORD", "password123")
-    GEMINI_KEY = "AIzaSyDpCQkb0ZkEBvP341plbDr6rui0Ajz-qIs" #os.environ.get("GEMINI_API_KEY")
+    GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
 
     if not GEMINI_KEY:
         print("WARNING: GEMINI_API_KEY not set. Some AI features will fail.")
