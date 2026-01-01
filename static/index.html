@@ -1563,7 +1563,10 @@
             try {
                 const data = await fetchAPI('/v1/auth/keys', {
                     method: 'POST',
-                    body: JSON.stringify({ name })
+                    body: JSON.stringify({ 
+                        name,
+                        scopes: ["memories:read", "memories:write", "context", "ingest", "dump"]
+                    })
                 });
 
                 document.getElementById('newKeyDisplay').style.display = 'block';
