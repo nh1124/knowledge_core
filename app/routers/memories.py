@@ -12,6 +12,7 @@ from app.schemas import (
     MemoryUpdateRequest, 
     MemoryResponse, 
     MemoryListResponse,
+    MemoryStatsResponse,
 )
 from app.models.enums import MemoryType, Scope
 from app.dependencies import resolve_user_id, resolve_scope_and_agent, request_warnings, require_scope
@@ -66,7 +67,7 @@ async def list_memories(
     memory_type: Optional[MemoryType] = Query(None, description="Memory type filter"),
     tags: Optional[str] = Query(None, description="Comma-separated tags"),
     q: Optional[str] = Query(None, description="Search query (vector similarity)"),
-    limit: int = Query(50, ge=1, le=100, description="Result limit"),
+    limit: int = Query(100, ge=1, le=2000, description="Result limit"),
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(resolve_user_id),
     scope_data: tuple = Depends(resolve_scope_and_agent),
@@ -100,6 +101,29 @@ async def list_memories(
     return MemoryListResponse(
         memories=[MemoryResponse(**m) for m in memories],
         total=len(memories),
+        warnings=request_warnings.get()
+    )
+
+
+@router.get("/memories/stats", response_model=MemoryStatsResponse)
+async def get_memory_stats(
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(resolve_user_id),
+    scope_data: tuple = Depends(resolve_scope_and_agent),
+    _identity = Depends(require_scope("memories:read")),
+) -> MemoryStatsResponse:
+    """Get summarized stats for memories."""
+    scope, agent_id = scope_data
+    manager = MemoryManager(db)
+    
+    stats = await manager.get_stats(
+        user_id=user_id,
+        scope=scope,
+        agent_id=agent_id,
+    )
+    
+    return MemoryStatsResponse(
+        **stats,
         warnings=request_warnings.get()
     )
 

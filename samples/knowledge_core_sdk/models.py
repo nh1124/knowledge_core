@@ -106,6 +106,14 @@ class MemoryListResponse(BaseModel):
     total: int
     warnings: Optional[List[str]] = None
 
+class MemoryStatsResponse(BaseModel):
+    total: int
+    fact: int
+    state: int
+    episode: int
+    policy: int
+    warnings: Optional[List[str]] = None
+
 # --- Ingest Models ---
 
 class IngestRequest(BaseModel):

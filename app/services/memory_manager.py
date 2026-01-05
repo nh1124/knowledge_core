@@ -300,7 +300,7 @@ class MemoryManager:
         scope: Scope = Scope.GLOBAL,
         agent_id: Optional[str] = None,
         include_global: bool = True,
-        limit: int = 50,
+        limit: int = 100,
         api_key: Optional[str] = None,
     ) -> list[dict]:
         """Search memories with optional vector similarity."""
@@ -416,6 +416,53 @@ class MemoryManager:
         
         return memories
     
+    async def get_stats(
+        self,
+        user_id: uuid.UUID,
+        scope: Scope = Scope.GLOBAL,
+        agent_id: Optional[str] = None,
+    ) -> dict:
+        """Get stats about memories (counts by type)."""
+        # Set RLS context
+        await self._apply_rls(user_id)
+        
+        conditions = ["valid_to IS NULL", "user_id = :user_id"]
+        params = {"user_id": user_id}
+        
+        if scope == Scope.AGENT and agent_id:
+            conditions.append("(scope = 'global' OR (scope = 'agent' AND agent_id = :agent_id))")
+            params["agent_id"] = agent_id
+        else:
+            conditions.append("scope = 'global'")
+            
+        where_clause = " AND ".join(conditions)
+        
+        sql = f"""
+            SELECT memory_type, COUNT(*) 
+            FROM memories 
+            WHERE {where_clause}
+            GROUP BY memory_type
+        """
+        
+        result = await self.session.execute(text(sql), params)
+        rows = result.fetchall()
+        
+        stats = {
+            "total": 0,
+            "fact": 0,
+            "state": 0,
+            "episode": 0,
+            "policy": 0
+        }
+        
+        for row in rows:
+            mtype = row[0]
+            count = row[1]
+            stats[mtype] = count
+            stats["total"] += count
+            
+        return stats
+
     async def get_memory(self, memory_id: uuid.UUID, user_id: Optional[uuid.UUID] = None) -> Optional[dict]:
         """Get a single memory by ID."""
         if user_id:

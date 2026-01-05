@@ -17,7 +17,7 @@ from .models import (
     APIKeyCreateRequest, APIKeyResponse, APIKeyNewResponse,
     PasswordChangeRequest, SystemConfigResponse, SystemConfigRequest,
     UserSettingsRequest, MemoryCreateRequest, MemoryUpdateRequest,
-    MemoryResponse, MemoryListResponse, IngestRequest, IngestResponse,
+    MemoryResponse, MemoryListResponse, MemoryStatsResponse, IngestRequest, IngestResponse,
     ContextRequest, ContextResponse
 )
 
@@ -225,7 +225,7 @@ class KnowledgeCoreClient:
         return MemoryResponse(**data)
 
     def list_memories(self, memory_type: Optional[str] = None, tags: Optional[str] = None, 
-                      query: Optional[str] = None, limit: int = 50) -> MemoryListResponse:
+                      query: Optional[str] = None, limit: int = 100) -> MemoryListResponse:
         """Search and retrieve memories."""
         params = {"limit": limit}
         if memory_type: params["memory_type"] = memory_type
@@ -233,6 +233,11 @@ class KnowledgeCoreClient:
         if query: params["q"] = query
         data = self._request("GET", "/v1/memories", params=params)
         return MemoryListResponse(**data)
+
+    def get_memory_stats(self) -> MemoryStatsResponse:
+        """Get summarized stats for memories."""
+        data = self._request("GET", "/v1/memories/stats")
+        return MemoryStatsResponse(**data)
 
     def get_memory(self, memory_id: Union[str, uuid.UUID]) -> MemoryResponse:
         """Get a single memory by ID."""

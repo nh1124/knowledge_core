@@ -286,8 +286,22 @@ tags	カンマ区切り
 q	簡易全文検索
 valid_at	指定時点で有効な記憶
 from / to	時間範囲
-limit	件数（default 50）
+limit	件数（default 100）
 cursor	ページング用
+
+GET /v1/memories/stats — 記憶の統計取得
+項目	内容
+概要	メモリタイプ別の登録件数（Fact/State/Episode/Policy）を取得
+主用途	ダッシュボード表示、データ分析
+Response（例）
+{
+  "total": 1250,
+  "fact": 50,
+  "state": 200,
+  "episode": 1000,
+  "policy": 0,
+  "warnings": []
+}
 
 POST /v1/context — 文脈合成（RAG）
 項目	内容

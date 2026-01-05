@@ -1238,12 +1238,16 @@
             const list = document.getElementById('memoryList');
             list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
-            let url = '/v1/memories?limit=50';
+            let url = '/v1/memories?limit=100';
             if (currentFilter) url += '&memory_type=' + currentFilter;
 
-            const data = await fetchAPI(url);
-            renderMemories(data.memories || []);
-            updateStats(data.memories || []);
+            const [memoryData, statsData] = await Promise.all([
+                fetchAPI(url),
+                fetchAPI('/v1/memories/stats')
+            ]);
+
+            renderMemories(memoryData.memories || []);
+            updateStats(statsData);
         }
 
         // Search memories
@@ -1257,7 +1261,7 @@
             const list = document.getElementById('memoryList');
             list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
-            const data = await fetchAPI('/v1/memories?q=' + encodeURIComponent(query) + '&limit=50');
+            const data = await fetchAPI('/v1/memories?q=' + encodeURIComponent(query) + '&limit=100');
             renderMemories(data.memories || []);
         }
 
@@ -1308,11 +1312,11 @@
         }
 
         // Update stats
-        function updateStats(memories) {
-            document.getElementById('statTotal').textContent = memories.length;
-            document.getElementById('statFacts').textContent = memories.filter(m => m.memory_type === 'fact').length;
-            document.getElementById('statStates').textContent = memories.filter(m => m.memory_type === 'state').length;
-            document.getElementById('statEpisodes').textContent = memories.filter(m => m.memory_type === 'episode').length;
+        function updateStats(stats) {
+            document.getElementById('statTotal').textContent = stats.total || 0;
+            document.getElementById('statFacts').textContent = stats.fact || 0;
+            document.getElementById('statStates').textContent = stats.state || 0;
+            document.getElementById('statEpisodes').textContent = stats.episode || 0;
         }
 
         // AI Ingest

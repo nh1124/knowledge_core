@@ -83,6 +83,16 @@ class MemoryListResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class MemoryStatsResponse(BaseModel):
+    """Response for GET /v1/memories/stats."""
+    total: int
+    fact: int
+    state: int
+    episode: int
+    policy: int
+    warnings: list[str] = Field(default_factory=list)
+
+
 # ==================== Context (RAG) Schemas ====================
 
 class ContextRequest(BaseModel):
