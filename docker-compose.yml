@@ -19,5 +19,19 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build: .
+    ports:
+      - "8200:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://cortex:cortex_password@postgres:5432/cortex_db
+      - PORT=8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+
 volumes:
   cortex_data:
+
+
