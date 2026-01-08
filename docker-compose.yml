@@ -22,10 +22,10 @@ services:
   backend:
     build: .
     ports:
-      - "${KC_HOST_PORT:-8200}:${PORT:-8000}"
+      - "${KC_HOST_PORT:-8200}:${BACKEND_PORT:-8000}"
     environment:
       - DATABASE_URL=postgresql+asyncpg://cortex:cortex_password@postgres:5432/cortex_db
-      - PORT=${PORT:-8000}
+      - BACKEND_PORT=${BACKEND_PORT:-8000}
 
     depends_on:
       postgres:

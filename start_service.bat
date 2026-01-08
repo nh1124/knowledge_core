@@ -19,7 +19,11 @@ docker-compose up -d
 
 REM Start uvicorn with settings from environment
 if not defined HOST set HOST=0.0.0.0
-if not defined PORT set PORT=8000
+if defined KC_HOST_PORT (
+    set PORT=%KC_HOST_PORT%
+) else (
+    if not defined PORT set PORT=8200
+)
 
 echo.
 echo TIP: Ensure your database is running (e.g., docker-compose up -d)

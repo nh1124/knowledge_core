@@ -8,7 +8,8 @@ class Settings(BaseSettings):
     
     # Server
     host: str = "0.0.0.0"
-    port: int = 8200
+    backend_port: int = 8000
+    kc_host_port: int = 8200
     
     # Database
     database_url: str = "postgresql+asyncpg://cortex:cortex_password@localhost:5432/cortex_db"
@@ -52,6 +53,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"  # Prevent crashes if extra env vars are present
 
 
 @lru_cache()
