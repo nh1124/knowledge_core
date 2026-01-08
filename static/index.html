@@ -1225,8 +1225,9 @@
                     document.getElementById('loginPass').value = password;
                     toggleRegister();
                 } else {
-                    const error = await response.json();
-                    alert('Failed to create account: ' + (error.error?.message || 'Please try another email.'));
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMessage = errorData.error?.message || 'Please try another email.';
+                    alert('Failed to create account: ' + errorMessage);
                 }
             } catch (e) {
                 alert('Error connecting to server.');
@@ -1567,7 +1568,7 @@
             try {
                 const data = await fetchAPI('/v1/auth/keys', {
                     method: 'POST',
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         name,
                         scopes: ["memories:read", "memories:write", "context", "ingest", "dump"]
                     })

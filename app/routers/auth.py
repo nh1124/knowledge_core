@@ -38,7 +38,7 @@ class RegisterRequest(BaseModel):
     password: str
     name: Optional[str] = None
     is_admin: bool = False
-    gemini_api_key: str = Field(..., description="Gemini API key (required for AI features)")
+    gemini_api_key: Optional[str] = Field(None, description="Gemini API key (optional during registration)")
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -132,7 +132,11 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
         
     hashed_pass = get_password_hash(request.password)
     user_id = uuid.uuid4()
-    encrypted_gemini_key = encrypt_secret(request.gemini_api_key)
+    
+    # Encrypt gemini key if provided
+    encrypted_gemini_key = None
+    if request.gemini_api_key:
+        encrypted_gemini_key = encrypt_secret(request.gemini_api_key)
     
     await db.execute(
         text("INSERT INTO users (user_id, email, password_hash, name, is_admin, gemini_api_key) VALUES (:id, :e, :h, :n, :a, :g)"),
