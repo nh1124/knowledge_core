@@ -362,8 +362,8 @@ format	json / jsonl
     • Database: PostgreSQL + pgvector
         ○ メインアプリとは別プロジェクト、または別スキーマ (cortex) での管理を推奨。
     • AI Model (Hybrid):
-        ○ Reasoning/Synthesis: Gemini 2.5 flash light (文脈理解、高度な要約用)
-        ○ Extraction/Tagging: Gemini 2.5 flash light or Local LLM (Ollama/Gemma) (高速・低コストな分類用)
+        ○ Reasoning/Synthesis: Gemini 2.5 Flash-Lite (文脈理解、高度な要約用)
+        ○ Extraction/Tagging: Gemini 2.5 Flash-Lite or Local LLM (Ollama/Gemma) (高速・低コストな分類用)
         ○ Embedding: text-embedding-004 (Gemini) or OpenAI text-embedding-3-small
     • Ingest処理の非同期 (Async)
         ○ APIはリクエストを受け付けたら即座に 202 Accepted と job_id を返す。

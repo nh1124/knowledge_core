@@ -14,11 +14,11 @@ if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
 fi
 
-# Start docker-compose
+# Start docker-compose (only postgres for local development)
 if command -v docker-compose &> /dev/null; then
-    docker-compose up -d
+    docker-compose up -d postgres
 elif command -v docker &> /dev/null && docker compose version &> /dev/null; then
-    docker compose up -d
+    docker compose up -d postgres
 else
     echo "WARNING: docker-compose not found. Database might not be running."
 fi
