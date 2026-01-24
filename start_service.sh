@@ -11,7 +11,15 @@ fi
 
 # Load environment variables from .env if it exists
 if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Skip comments and empty lines
+        if [[ "$line" =~ ^# ]] || [[ -z "$line" ]]; then
+            continue
+        fi
+        # Remove carriage return for Windows-edited files
+        clean_line=$(echo "$line" | tr -d '\r')
+        export "$clean_line"
+    done < .env
 fi
 
 # Start docker-compose (only postgres for local development)
